@@ -1,0 +1,12 @@
+#!/usr/bin/bash -e
+
+# Install Chocolate Doom, ffmpeg, and other prerequisites.
+# https://www.chocolate-doom.org/wiki/index.php/Chocolate_Doom
+# https://ffmpeg.org/
+apt-get update 
+curl -fsSL https://deb.nodesource.com/setup_22.x | bash -
+apt-get install -y chocolate-doom xvfb xdotool ffmpeg ruby nodejs
+
+# Install Claude Code.
+# https://docs.anthropic.com/en/docs/claude-code/setup
+npm install -g @anthropic-ai/claude-code

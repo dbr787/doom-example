@@ -1,0 +1,8 @@
+name: "Doom Example"
+description: "An example pipeline that uses Claude Code to play Doom on Buildkite."
+emoji: ":rage4:"
+languages:
+  - Ruby
+steps:
+  - label: ":pipeline:"
+    command: "buildkite-agent pipeline upload"

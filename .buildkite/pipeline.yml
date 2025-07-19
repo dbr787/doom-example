@@ -1,0 +1,25 @@
+steps:
+  - input: ":video_game: How to play?"
+    key: mode
+    fields:
+      - select: Game mode
+        key: mode
+        options:
+          - label: Prompt me for every move
+            value: manual
+          - label: Choose moves completely at random
+            value: random
+          - label: Let Claude run the show
+            value: ai
+
+  - label: ":rage4: Run Doom"
+    depends_on: mode
+    commands:
+      - echo "~~~ Downloading Doom"
+      - curl -o shareware_doom_iwad.zip https://www.doomworld.com/3ddownloads/ports/shareware_doom_iwad.zip
+      - unzip shareware_doom_iwad.zip
+      
+      - echo "~~~ Starting the Doom server"
+      - exec ./doom.rb
+    env:
+      ANTHROPIC_API_KEY: $ANTHROPIC_API_KEY

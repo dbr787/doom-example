@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Read",
+      "Read(*.png)",
+      "Write",
+      "Write(move.json)",
+      "Bash(ffmpeg:*)"
+    ],
+    "deny": []
+  }
+}
