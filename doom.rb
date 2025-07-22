@@ -98,17 +98,35 @@ end
 def start_doom
   ENV["DISPLAY"] = ":1"
 
+  puts "Starting Xvfb..."
   server_pid = spawn "Xvfb :1 -screen 0 320x240x24"
   Process.detach(server_pid)
-  sleep 1
+  sleep 2
 
+  puts "Starting Doom..."
   doom_pid = spawn "/usr/games/chocolate-doom -geometry 320x240 -iwad DOOM1.WAD -episode 1 "
   Process.detach(doom_pid)
+  sleep 2
+  
+  # Check if doom process is still alive
+  begin
+    Process.kill(0, doom_pid)
+    puts "Doom process #{doom_pid} started successfully"
+  rescue Errno::ESRCH
+    puts "ERROR: Doom process #{doom_pid} died immediately after starting"
+    exit 1
+  end
+  
   doom_pid
 end
 
 def signal_doom(pid, signal)
-  Process.kill(signal, pid)
+  begin
+    Process.kill(signal, pid)
+  rescue Errno::ESRCH
+    puts "Warning: Doom process #{pid} no longer exists"
+    false
+  end
 end
 
 def grab_frames(i, duration)
