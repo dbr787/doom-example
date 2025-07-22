@@ -1,5 +1,5 @@
 name: "Doom Example"
-description: "An example pipeline that uses Claude Code to play Doom on Buildkite."
+description: "An example pipeline that lets you play Doom on Buildkite, optionally with Claude Code."
 emoji: ":rage4:"
 languages:
   - Ruby
