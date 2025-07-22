@@ -17,7 +17,7 @@ steps:
     plugins:
       - docker-compose#v5.10.0:
           run: doom-game
-          command: ["./doom.rb"]
+          command: ["bash", "-c", "cd /tmp && cp /app/doom.rb . && cp -r /app/.buildkite . && ./doom.rb"]
           mount-buildkite-agent: true
           environment:
             - ANTHROPIC_API_KEY
