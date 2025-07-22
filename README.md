@@ -1,6 +1,5 @@
 # Buildkite Doom Example
 
-[![Build status](https://badge.buildkite.com/61ca6abfd586f4075560b0b11221b879bdc62f00f65c9a07a3.svg)](https://buildkite.com/buildkite/doom-example)
 [![Add to Buildkite](https://img.shields.io/badge/Add%20to%20Buildkite-14CC80)](https://buildkite.com/new)
 
 Now you can play [Doom](https://www.chocolate-doom.org/wiki/index.php/Chocolate_Doom) on [Buildkite](https://buildkite.com) — or have AI play it for you!
