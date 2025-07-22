@@ -9,6 +9,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     ruby-dev \
     curl \
     wget \
+    unzip \
     xvfb \
     xdotool \
     ffmpeg \
@@ -17,17 +18,23 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/* \
     && apt-get clean
 
-# Download DOOM1.WAD (do this early since it rarely changes)
+# Download DOOM shareware WAD
 RUN mkdir -p /usr/share/games/doom \
     && curl -L --retry 3 --retry-delay 2 \
-           -o /usr/share/games/doom/DOOM1.WAD \
-           "https://distro.ibiblio.org/pub/linux/distributions/slitaz/sources/packages/d/doom1.wad" \
+           -o /tmp/doom19s.zip \
+           "https://www.doomworld.com/3ddownloads/ports/shareware_doom_iwad.zip" \
+    && cd /tmp \
+    && unzip -j doom19s.zip \
+    && mv DOOM1.WAD /usr/share/games/doom/ \
     && ls -la /usr/share/games/doom/ \
     && file /usr/share/games/doom/DOOM1.WAD \
     || (echo "Primary download failed, trying alternative..." \
         && curl -L --retry 3 --retry-delay 2 \
-               -o /usr/share/games/doom/DOOM1.WAD \
-               "https://archive.org/download/DoomsharewareEpisode/doom1.wad" \
+               -o /tmp/dooms_19.zip \
+               "https://archive.org/download/DoomsharewareEpisode/doom_shareware_episode.zip" \
+        && cd /tmp \
+        && unzip -j dooms_19.zip \
+        && mv DOOM1.WAD /usr/share/games/doom/ 2>/dev/null || mv doom1.wad /usr/share/games/doom/DOOM1.WAD \
         && ls -la /usr/share/games/doom/ \
         && file /usr/share/games/doom/DOOM1.WAD \
         || echo "DOOM1.WAD download failed - needs to be provided manually")
