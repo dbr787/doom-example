@@ -3,9 +3,3 @@ services:
     build: .
     environment:
       - DISPLAY=:1
-    volumes:
-      - /tmp/.X11-unix:/tmp/.X11-unix:rw
-    stdin_open: true
-    tty: true
-    privileged: true
-    init: true

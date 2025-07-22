@@ -3,41 +3,22 @@ FROM ubuntu:22.04
 # Prevent interactive prompts during package installation
 ENV DEBIAN_FRONTEND=noninteractive
 
-# Install required packages (use --no-install-recommends to keep image smaller)
+# Install required packages
 RUN apt-get update && apt-get install -y --no-install-recommends \
     ruby \
-    ruby-dev \
     curl \
-    wget \
     unzip \
     xvfb \
     xdotool \
     ffmpeg \
     chocolate-doom \
-    build-essential \
-    && rm -rf /var/lib/apt/lists/* \
-    && apt-get clean
+    && rm -rf /var/lib/apt/lists/*
 
 # Download DOOM shareware WAD
 RUN mkdir -p /usr/share/games/doom \
-    && curl -L --retry 3 --retry-delay 2 \
-           -o /tmp/doom19s.zip \
-           "https://www.doomworld.com/3ddownloads/ports/shareware_doom_iwad.zip" \
-    && cd /tmp \
-    && unzip -j doom19s.zip \
-    && mv DOOM1.WAD /usr/share/games/doom/ \
-    && ls -la /usr/share/games/doom/ \
-    && file /usr/share/games/doom/DOOM1.WAD \
-    || (echo "Primary download failed, trying alternative..." \
-        && curl -L --retry 3 --retry-delay 2 \
-               -o /tmp/dooms_19.zip \
-               "https://archive.org/download/DoomsharewareEpisode/doom_shareware_episode.zip" \
-        && cd /tmp \
-        && unzip -j dooms_19.zip \
-        && mv DOOM1.WAD /usr/share/games/doom/ 2>/dev/null || mv doom1.wad /usr/share/games/doom/DOOM1.WAD \
-        && ls -la /usr/share/games/doom/ \
-        && file /usr/share/games/doom/DOOM1.WAD \
-        || echo "DOOM1.WAD download failed - needs to be provided manually")
+    && curl -L -o /tmp/doom.zip "https://www.doomworld.com/3ddownloads/ports/shareware_doom_iwad.zip" \
+    && unzip -j /tmp/doom.zip -d /usr/share/games/doom/ \
+    && rm /tmp/doom.zip
 
 # Create non-root user for security  
 RUN useradd --create-home --shell /bin/bash doom \

@@ -98,44 +98,19 @@ end
 def start_doom
   ENV["DISPLAY"] = ":1"
 
-  puts "Starting Xvfb..."
-  server_pid = spawn "Xvfb :1 -screen 0 320x240x24 -ac +extension GLX +render -noreset"
+  server_pid = spawn "Xvfb :1 -screen 0 320x240x24"
   Process.detach(server_pid)
-  sleep 3
+  sleep 1
 
-  puts "Checking for DOOM1.WAD..."
-  wad_file = "/usr/share/games/doom/DOOM1.WAD"
-  unless File.exist?(wad_file)
-    puts "ERROR: DOOM1.WAD not found at #{wad_file}"
-    puts "Available files in /usr/share/games/doom/:"
-    system "ls -la /usr/share/games/doom/"
-    exit 1
-  end
-  
-  puts "Starting Doom..."
-  doom_pid = spawn "/usr/games/chocolate-doom -geometry 320x240 -iwad #{wad_file} -episode 1"
+  doom_pid = spawn "/usr/games/chocolate-doom -geometry 320x240 -iwad /usr/share/games/doom/DOOM1.WAD -episode 1"
   Process.detach(doom_pid)
-  sleep 2
-  
-  # Check if doom process is still alive
-  begin
-    Process.kill(0, doom_pid)
-    puts "Doom process #{doom_pid} started successfully"
-  rescue Errno::ESRCH
-    puts "ERROR: Doom process #{doom_pid} died immediately after starting"
-    exit 1
-  end
-  
   doom_pid
 end
 
 def signal_doom(pid, signal)
-  begin
-    Process.kill(signal, pid)
-  rescue Errno::ESRCH
-    puts "Warning: Doom process #{pid} no longer exists"
-    false
-  end
+  Process.kill(signal, pid)
+rescue Errno::ESRCH
+  # Ignore if process no longer exists
 end
 
 def grab_frames(i, duration)
