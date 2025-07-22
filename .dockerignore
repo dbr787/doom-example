@@ -1,0 +1,12 @@
+.git
+.gitignore
+README.md
+LICENSE.md
+*.md
+.claude/
+*.apng
+*.png
+*.json
+frame_*.png
+prompt.txt
+move.json

@@ -1,0 +1,24 @@
+version: '3.8'
+
+services:
+  # Doom game container (to be used by Buildkite agent)
+  doom-game:
+    build: .
+    environment:
+      - DISPLAY=:1
+    volumes:
+      - /tmp/.X11-unix:/tmp/.X11-unix:rw
+    stdin_open: true
+    tty: true
+
+  # Buildkite agent (runs separately)
+  buildkite-agent:
+    image: buildkite/agent:3-ubuntu
+    environment:
+      - BUILDKITE_AGENT_TOKEN=${BUILDKITE_AGENT_TOKEN}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - .:/workspace
+    working_dir: /workspace
+    command: buildkite-agent start --token ${BUILDKITE_AGENT_TOKEN} --spawn 2

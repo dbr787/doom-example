@@ -14,13 +14,10 @@ steps:
 
   - label: ":rage4: Run Doom"
     depends_on: mode
-    commands:
-      - echo "~~~ Downloading Doom"
-      - curl -o shareware_doom_iwad.zip https://www.doomworld.com/3ddownloads/ports/shareware_doom_iwad.zip
-      - unzip shareware_doom_iwad.zip
-      
-      - echo "~~~ Starting the Doom server"
-      - exec ./doom.rb
-    env:
-      ANTHROPIC_API_KEY: $ANTHROPIC_API_KEY
-      
+    plugins:
+      - docker-compose#v5.10.0:
+          run: doom-game
+          command: ["./doom.rb"]
+          mount-buildkite-agent: true
+          environment:
+            - ANTHROPIC_API_KEY
