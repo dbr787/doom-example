@@ -8,3 +8,4 @@ services:
     stdin_open: true
     tty: true
     privileged: true
+    init: true

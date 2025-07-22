@@ -27,9 +27,7 @@ RUN mkdir -p /usr/share/games/doom \
 
 # Create non-root user for security  
 RUN useradd --create-home --shell /bin/bash doom \
-    && chown -R doom:doom /usr/share/games/doom \
-    && mkdir -p /tmp/.X11-unix \
-    && chmod 1777 /tmp/.X11-unix
+    && chown -R doom:doom /usr/share/games/doom
 
 # Set working directory
 WORKDIR /app

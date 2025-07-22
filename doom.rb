@@ -99,12 +99,13 @@ def start_doom
   ENV["DISPLAY"] = ":1"
 
   puts "Starting Xvfb..."
-  server_pid = spawn "Xvfb :1 -screen 0 320x240x24"
+  system "mkdir -p /tmp/.X11-unix && chmod 1777 /tmp/.X11-unix"
+  server_pid = spawn "Xvfb :1 -screen 0 320x240x24 -ac +extension GLX +render -noreset"
   Process.detach(server_pid)
-  sleep 2
+  sleep 3
 
   puts "Starting Doom..."
-  doom_pid = spawn "/usr/games/chocolate-doom -geometry 320x240 -iwad DOOM1.WAD -episode 1 "
+  doom_pid = spawn "/usr/games/chocolate-doom -geometry 320x240 -iwad /usr/share/games/doom/DOOM1.WAD -episode 1"
   Process.detach(doom_pid)
   sleep 2
   
