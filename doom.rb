@@ -99,13 +99,21 @@ def start_doom
   ENV["DISPLAY"] = ":1"
 
   puts "Starting Xvfb..."
-  system "mkdir -p /tmp/.X11-unix && chmod 1777 /tmp/.X11-unix"
   server_pid = spawn "Xvfb :1 -screen 0 320x240x24 -ac +extension GLX +render -noreset"
   Process.detach(server_pid)
   sleep 3
 
+  puts "Checking for DOOM1.WAD..."
+  wad_file = "/usr/share/games/doom/DOOM1.WAD"
+  unless File.exist?(wad_file)
+    puts "ERROR: DOOM1.WAD not found at #{wad_file}"
+    puts "Available files in /usr/share/games/doom/:"
+    system "ls -la /usr/share/games/doom/"
+    exit 1
+  end
+  
   puts "Starting Doom..."
-  doom_pid = spawn "/usr/games/chocolate-doom -geometry 320x240 -iwad /usr/share/games/doom/DOOM1.WAD -episode 1"
+  doom_pid = spawn "/usr/games/chocolate-doom -geometry 320x240 -iwad #{wad_file} -episode 1"
   Process.detach(doom_pid)
   sleep 2
   

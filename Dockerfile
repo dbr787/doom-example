@@ -19,11 +19,18 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 # Download DOOM1.WAD (do this early since it rarely changes)
 RUN mkdir -p /usr/share/games/doom \
-    && wget --retry-connrefused --waitretry=1 --read-timeout=20 --timeout=15 -t 3 \
-           -O /tmp/doom1.wad \
-           "https://archive.org/download/DoomsharewareEpisode/doom1.wad" \
-    && mv /tmp/doom1.wad /usr/share/games/doom/DOOM1.WAD \
-    || echo "DOOM1.WAD download failed - needs to be provided manually"
+    && curl -L --retry 3 --retry-delay 2 \
+           -o /usr/share/games/doom/DOOM1.WAD \
+           "https://distro.ibiblio.org/pub/linux/distributions/slitaz/sources/packages/d/doom1.wad" \
+    && ls -la /usr/share/games/doom/ \
+    && file /usr/share/games/doom/DOOM1.WAD \
+    || (echo "Primary download failed, trying alternative..." \
+        && curl -L --retry 3 --retry-delay 2 \
+               -o /usr/share/games/doom/DOOM1.WAD \
+               "https://archive.org/download/DoomsharewareEpisode/doom1.wad" \
+        && ls -la /usr/share/games/doom/ \
+        && file /usr/share/games/doom/DOOM1.WAD \
+        || echo "DOOM1.WAD download failed - needs to be provided manually")
 
 # Create non-root user for security  
 RUN useradd --create-home --shell /bin/bash doom \
