@@ -12,6 +12,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     xdotool \
     ffmpeg \
     chocolate-doom \
+    gnupg \
     && rm -rf /var/lib/apt/lists/*
 
 # Install Buildkite agent for container use
