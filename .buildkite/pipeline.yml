@@ -14,6 +14,7 @@ steps:
 
   - label: ":rage4: Run Doom"
     depends_on: mode
+    timeout_in_minutes: 30
     plugins:
       - docker-compose#v5.10.0:
           run: doom-game

@@ -1,4 +1,4 @@
-FROM ubuntu:22.04
+FROM --platform=$BUILDPLATFORM ubuntu:22.04
 
 # Prevent interactive prompts during package installation
 ENV DEBIAN_FRONTEND=noninteractive
