@@ -40,5 +40,8 @@ RUN chmod +x doom.rb
 # Switch to non-root user
 USER doom
 
-# Default command - run the doom game
-CMD ["./doom.rb"]
+# Set runtime working directory to writable location
+WORKDIR /tmp
+
+# Copy fresh code at runtime and execute
+ENTRYPOINT ["sh", "-c", "cp /app/doom.rb /app/.buildkite -r . && exec ./doom.rb"]
