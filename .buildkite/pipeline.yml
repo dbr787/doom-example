@@ -18,10 +18,6 @@ steps:
     plugins:
       - docker-compose#v5.10.0:
           run: doom-game
+          propagate-environment: true
           environment:
-            - BUILDKITE_AGENT_ACCESS_TOKEN
-            - BUILDKITE_JOB_ID
-            - BUILDKITE_BUILD_ID
-            - BUILDKITE_STEP_ID
-            - BUILDKITE_AGENT_ENDPOINT
             - ANTHROPIC_API_KEY
