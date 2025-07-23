@@ -1,4 +1,4 @@
-FROM --platform=$BUILDPLATFORM ubuntu:22.04
+FROM ubuntu:22.04
 
 # Prevent interactive prompts during package installation
 ENV DEBIAN_FRONTEND=noninteractive
@@ -12,6 +12,13 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     xdotool \
     ffmpeg \
     chocolate-doom \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install Buildkite agent for container use
+RUN curl -fsSL https://keys.openpgp.org/vks/v1/by-fingerprint/32A37959C2FA5C3C99EFBC32A79206696452D198 | gpg --dearmor -o /usr/share/keyrings/buildkite-agent-archive-keyring.gpg \
+    && echo "deb [signed-by=/usr/share/keyrings/buildkite-agent-archive-keyring.gpg] https://apt.buildkite.com/buildkite-agent stable main" | tee /etc/apt/sources.list.d/buildkite-agent.list \
+    && apt-get update \
+    && apt-get install -y buildkite-agent \
     && rm -rf /var/lib/apt/lists/*
 
 # Download DOOM shareware WAD
