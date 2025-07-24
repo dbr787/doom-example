@@ -136,13 +136,24 @@ end
 def upload_clip(i)
   reason = i == 0 ? "Game on." : `buildkite-agent meta-data get "reason#{i - 1}"`
 
+  puts "Looking for #{i}.apng..."
+  puts "Files in directory: #{Dir.glob('*').join(', ')}"
+  
   # Smuggle the APNG in as a PNG, otherwise Camo blocks it.
-  File.rename("#{i}.apng", "#{i}.png") if File.exist?("#{i}.apng")
+  if File.exist?("#{i}.apng")
+    puts "Found #{i}.apng, renaming to #{i}.png"
+    File.rename("#{i}.apng", "#{i}.png")
+  else
+    puts "#{i}.apng not found!"
+  end
+  
   file = "#{i}.png"
   
   if File.exist?(file)
+    puts "Uploading #{file}..."
     system "buildkite-agent artifact upload #{file}"
-    Open3.capture2("buildkite-agent annotate", stdin_data: %(<img class="block" width="640" height="480" src="artifact://#{file}"><p>#{reason}</p></div>))
+    puts "Creating annotation with reason: #{reason.strip}"
+    Open3.capture2("buildkite-agent annotate", stdin_data: %(<img class="block" width="640" height="480" src="artifact://#{file}"><p>#{reason.strip}</p>))
   else
     puts "Warning: #{file} not found"
   end
