@@ -97,9 +97,21 @@ def wait_for_key(i)
 end
 
 def ensure_doom_container
+  puts "Current container ID: #{@container_id}"
+  
   # Check if container exists and is running
-  if @container_id && `docker inspect -f '{{.State.Running}}' #{@container_id} 2>/dev/null`.strip == "true"
-    return @container_id
+  if @container_id
+    running_status = `docker inspect -f '{{.State.Running}}' #{@container_id} 2>/dev/null`.strip
+    puts "Container running status: '#{running_status}'"
+    
+    if running_status == "true"
+      puts "Container is running, reusing it"
+      return @container_id
+    else
+      puts "Container is not running, will create new one"
+    end
+  else
+    puts "No container ID set, will create new one"  
   end
   
   # Clean up dead container
@@ -109,7 +121,7 @@ def ensure_doom_container
   system("docker build -t doom-game . > /dev/null 2>&1")
   @container_id = `docker run -d -v $(pwd):/output doom-game bash -c 'export DISPLAY=:1; Xvfb :1 -screen 0 320x240x24 & sleep 2; /usr/games/chocolate-doom -geometry 320x240 -iwad /usr/share/games/doom/DOOM1.WAD -episode 1 & sleep infinity'`.strip
   
-  puts "Started container: #{@container_id}"
+  puts "Started new container: #{@container_id}"
   sleep 3  # Give DOOM time to start
   
   at_exit { system("docker rm -f #{@container_id} 2>/dev/null") }
@@ -120,15 +132,21 @@ def run_doom_step(step, key)
   puts "Running DOOM step #{step} with key: #{key || 'none'}"
   
   container_id = ensure_doom_container
+  puts "Using container: #{container_id}"
+  
   duration = step == 0 ? 2.5 : 1.25
   
   # Send key to same DOOM instance
   if key
-    system("docker exec #{container_id} xdotool key #{key}")
+    puts "Sending key '#{key}' to container #{container_id}"
+    result = system("docker exec #{container_id} xdotool key #{key}")
+    puts "Key send result: #{result}"
   end
   
   # Capture from same DOOM instance  
-  system("docker exec #{container_id} bash -c 'ffmpeg -y -t #{duration} -video_size 320x240 -framerate 15 -f x11grab -i :1 -loop -1 /output/#{step}.apng'")
+  puts "Capturing video from container #{container_id}"
+  result = system("docker exec #{container_id} bash -c 'ffmpeg -y -t #{duration} -video_size 320x240 -framerate 15 -f x11grab -i :1 -loop -1 /output/#{step}.apng'")
+  puts "Video capture result: #{result}"
   
   upload_clip(step)
 end
