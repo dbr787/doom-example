@@ -22,10 +22,18 @@ def get_move_data(key)
   if use_mounted_agent?
     `buildkite-agent meta-data get "#{key}"`
   else
-    # Use artifacts as move data store - list artifacts, find by filename pattern key__value.txt
+    # First check for local files created in this session
+    local_files = Dir.glob("#{key}__*.txt")
+    if local_files.any?
+      filename = local_files.first
+      value = filename.sub("#{key}__", "").sub(".txt", "")
+      puts "Found local file: #{filename} -> #{value}"
+      return value
+    end
+    
+    # Fallback to artifacts for data from other steps
     result = `curl -s -H "Authorization: Bearer $BUILDKITE_API_TOKEN" "https://api.buildkite.com/v2/organizations/$BUILDKITE_ORGANIZATION_SLUG/pipelines/$BUILDKITE_PIPELINE_SLUG/builds/$BUILDKITE_BUILD_NUMBER/artifacts"`
     artifacts = JSON.parse(result) rescue []
-    # Handle case where artifacts is not an array of hashes
     return "" unless artifacts.is_a?(Array) && artifacts.all? { |a| a.is_a?(Hash) }
     found = artifacts.find { |a| a["filename"] && a["filename"].start_with?("#{key}__") && a["filename"].end_with?(".txt") }
     found ? found["filename"].sub("#{key}__", "").sub(".txt", "") : ""
