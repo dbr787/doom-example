@@ -274,6 +274,11 @@ loop do
   upload_clip(i)
 
   ask_for_key(i)
+  
+  # Give the uploaded pipeline steps time to start before polling
+  puts "Pipeline uploaded, waiting for step to start..."
+  sleep 2
+  
   key = wait_for_key(i)
 
   i += 1
