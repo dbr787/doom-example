@@ -16,29 +16,50 @@ def setup_doom
   puts "Setting up DOOM..."
   
   # Kill any existing processes
+  puts "Killing existing processes..."
   system("pkill -f chocolate-doom 2>/dev/null")
   system("pkill -f Xvfb 2>/dev/null")
+  sleep 1
   
   # Start virtual display
-  system("Xvfb :99 -screen 0 320x240x24 &")
-  sleep 2
+  puts "Starting Xvfb..."
+  system("Xvfb :99 -screen 0 320x240x24 > /dev/null 2>&1 &")
+  sleep 3
   
   # Set display
   ENV["DISPLAY"] = ":99"
+  puts "Set DISPLAY=:99"
   
   # Download DOOM WAD if not present
   unless File.exist?("DOOM1.WAD")
     puts "Downloading DOOM shareware..."
-    system("curl -L -o doom.zip 'https://www.doomworld.com/3ddownloads/ports/shareware_doom_iwad.zip'")
-    system("unzip -j doom.zip")
+    result = system("curl -L -o doom.zip 'https://www.doomworld.com/3ddownloads/ports/shareware_doom_iwad.zip'")
+    puts "Download failed!" unless result
+    
+    result = system("unzip -j doom.zip")
+    puts "Unzip failed!" unless result
+    
     system("rm -f doom.zip")
+    
+    unless File.exist?("DOOM1.WAD")
+      puts "ERROR: DOOM1.WAD not found after download!"
+      exit 1
+    end
   end
   
   # Start DOOM in background
-  system("chocolate-doom -geometry 320x240 -iwad DOOM1.WAD -episode 1 &")
-  sleep 3
+  puts "Starting DOOM..."
+  system("chocolate-doom -geometry 320x240 -iwad DOOM1.WAD -episode 1 > /dev/null 2>&1 &")
+  sleep 5
   
-  puts "DOOM is ready!"
+  # Check if DOOM is running
+  result = system("pgrep -f chocolate-doom > /dev/null")
+  if result
+    puts "DOOM is ready!"
+  else
+    puts "ERROR: DOOM failed to start!"
+    exit 1
+  end
 end
 
 def send_key(key)
@@ -127,13 +148,24 @@ end
 
 def wait_for_key(step)
   puts "Waiting for key_#{step}..."
+  timeout = 300  # 5 minutes max wait
+  elapsed = 0
+  
   loop do
     result = `buildkite-agent meta-data get "key_#{step}" 2>/dev/null`.strip
     if !result.empty?
       puts "Got key_#{step}: #{result}"
       return result
     end
+    
     sleep 1
+    elapsed += 1
+    
+    if elapsed >= timeout
+      puts "Timeout waiting for key_#{step}, using random move"
+      move = MOVES.sample
+      return move[:value]
+    end
   end
 end
 
@@ -155,26 +187,38 @@ trap("TERM") { cleanup; exit }
 setup_doom
 
 step = 0
+puts "Starting game loop..."
+
 loop do
+  puts "\n=== STEP #{step} ==="
+  
   # Capture current frame
+  puts "Capturing frame..."
   capture_frame(step)
   
   # Upload to Buildkite
+  puts "Uploading artifact..."
   upload_artifact(step)
   
   # Ask for next move (creates pipeline steps)
+  puts "Creating next move step..."
   ask_for_key(step)
   
   # Wait for the key to be set by the pipeline step
+  puts "Waiting for user input..."
   key = wait_for_key(step)
   
   # Execute the move
+  puts "Executing move: #{key}"
   send_key(key)
   
   step += 1
   
   # Limit to reasonable number of steps
-  break if step >= 20
+  if step >= 20
+    puts "Reached step limit"
+    break
+  end
 end
 
 puts "Game complete!"
