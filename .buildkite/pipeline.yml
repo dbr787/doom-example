@@ -1,5 +1,5 @@
 steps:
-  - label: "🎮 DOOM Game"
+  - label: "🎮 Run DOOM"
     commands:
       - "sudo apt-get update && sudo apt-get install -y xvfb xdotool ffmpeg chocolate-doom curl unzip"
       - "./doom_simple.rb"

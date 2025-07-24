@@ -65,35 +65,54 @@ def capture_frame(step)
   end
 end
 
-def upload_artifact(step, reason = nil)
+def upload_artifact(step)
   file = "#{step}.png"
   return unless File.exist?(file)
   
   puts "Uploading #{file}..."
   system("buildkite-agent artifact upload #{file}")
   
-  reason ||= step == 0 ? "Game started!" : "Move executed"
+  reason = if step == 0
+    "Game started!"
+  else
+    `buildkite-agent meta-data get "reason_#{step - 1}" 2>/dev/null`.strip
+  end
+  reason = "Move executed" if reason.empty?
   
   annotation = %(<img width="640" height="480" src="artifact://#{file}"><p>#{reason}</p>)
   Open3.capture2("buildkite-agent annotate", stdin_data: annotation)
 end
 
-def get_next_move(step)
+def ask_for_key(step)
   mode = `buildkite-agent meta-data get "mode" 2>/dev/null`.strip
   
   case mode
   when "random"
     move = MOVES.sample
     reason = "Random move: #{move[:label].downcase}"
-    puts "Random mode: #{move[:key]}"
-    return move[:value], reason
     
-  when "manual"
-    # Create input step for manual control
+    # Create pipeline step that sets the metadata
+    pipeline = {
+      steps: [{
+        label: "#{move[:emoji]} #{move[:label]}",
+        key: "step_#{step}",
+        depends_on: step == 0 ? [] : ["step_#{step - 1}"],
+        commands: [
+          "buildkite-agent meta-data set \"reason_#{step}\" \"#{reason}\"",
+          "buildkite-agent meta-data set \"key_#{step}\" \"#{move[:value]}\""
+        ]
+      }]
+    }
+    
+    Open3.capture2("buildkite-agent pipeline upload --replace", stdin_data: JSON.generate(pipeline))
+    
+  else
+    # Create input step for manual control (default behavior)
     pipeline = {
       steps: [{
         input: "Choose your move (Step #{step})",
-        key: "move_#{step}",
+        key: "step_#{step}",
+        depends_on: step == 0 ? [] : ["step_#{step - 1}"],
         fields: [{
           select: "What should we do?",
           key: "key_#{step}",
@@ -102,27 +121,19 @@ def get_next_move(step)
       }]
     }
     
-    stdout, stderr = Open3.capture2("buildkite-agent pipeline upload", stdin_data: JSON.generate(pipeline))
-    puts "Pipeline upload result: #{stdout}" if stdout && !stdout.empty?
-    puts "Pipeline upload error: #{stderr}" if stderr && !stderr.empty?
-    
-    # Wait for input
-    puts "Waiting for manual input..."
-    loop do
-      result = `buildkite-agent meta-data get "key_#{step}" 2>/dev/null`.strip
-      if !result.empty?
-        move = MOVES.find { |m| m[:value] == result }
-        return result, "Manual choice: #{move ? move[:label].downcase : result}"
-      end
-      sleep 1
+    Open3.capture2("buildkite-agent pipeline upload --replace", stdin_data: JSON.generate(pipeline))
+  end
+end
+
+def wait_for_key(step)
+  puts "Waiting for key_#{step}..."
+  loop do
+    result = `buildkite-agent meta-data get "key_#{step}" 2>/dev/null`.strip
+    if !result.empty?
+      puts "Got key_#{step}: #{result}"
+      return result
     end
-    
-  else
-    # Default to random if mode not set
-    move = MOVES.sample  
-    reason = "Default random move: #{move[:label].downcase}"
-    puts "No mode set, using random: #{move[:key]}"
-    return move[:value], reason
+    sleep 1
   end
 end
 
@@ -145,17 +156,20 @@ setup_doom
 
 step = 0
 loop do
-  # Get next move
-  key, reason = get_next_move(step)
-  
-  # Execute move
-  send_key(key)
-  
-  # Capture result
+  # Capture current frame
   capture_frame(step)
   
   # Upload to Buildkite
-  upload_artifact(step, reason)
+  upload_artifact(step)
+  
+  # Ask for next move (creates pipeline steps)
+  ask_for_key(step)
+  
+  # Wait for the key to be set by the pipeline step
+  key = wait_for_key(step)
+  
+  # Execute the move
+  send_key(key)
   
   step += 1
   
