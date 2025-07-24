@@ -5,5 +5,3 @@ steps:
       - "./doom_simple.rb"
     env:
       DISPLAY: ":99"
-    agents:
-      queue: "default"
