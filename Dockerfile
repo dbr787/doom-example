@@ -12,15 +12,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     xdotool \
     ffmpeg \
     chocolate-doom \
-    gnupg \
     && rm -rf /var/lib/apt/lists/*
 
-# Install Buildkite agent for container use
-RUN curl -fsSL https://keys.openpgp.org/vks/v1/by-fingerprint/32A37959C2FA5C3C99EFBC32A79206696452D198 | gpg --dearmor -o /usr/share/keyrings/buildkite-agent-archive-keyring.gpg \
-    && echo "deb [signed-by=/usr/share/keyrings/buildkite-agent-archive-keyring.gpg] https://apt.buildkite.com/buildkite-agent stable main" | tee /etc/apt/sources.list.d/buildkite-agent.list \
-    && apt-get update \
-    && apt-get install -y buildkite-agent \
-    && rm -rf /var/lib/apt/lists/*
+# Container only needs DOOM dependencies, no buildkite-agent
 
 # Download DOOM shareware WAD
 RUN mkdir -p /usr/share/games/doom \
@@ -38,12 +32,11 @@ WORKDIR /app
 # Set environment variables
 ENV DISPLAY=:1
 
-# Copy application files (do this late to maximize cache hits)
-COPY --chown=doom:doom doom.rb .
-COPY --chown=doom:doom .buildkite/ .buildkite/
+# Copy container script (do this late to maximize cache hits)
+COPY --chown=doom:doom doom_container.rb .
 
-# Make doom.rb executable
-RUN chmod +x doom.rb
+# Make container script executable
+RUN chmod +x doom_container.rb
 
 # Switch to non-root user
 USER doom
@@ -51,5 +44,5 @@ USER doom
 # Set runtime working directory to writable location
 WORKDIR /tmp
 
-# Copy fresh code at runtime and execute
-ENTRYPOINT ["sh", "-c", "cp /app/doom.rb /app/.buildkite -r . && exec ./doom.rb"]
+# Container script will be called by host with arguments
+ENTRYPOINT ["./doom_container.rb"]
