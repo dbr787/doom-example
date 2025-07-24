@@ -14,6 +14,64 @@ MOVES = [
   {label: "Open", key: "Space", value: "space", emoji: ":door:", description: "To open a door"}
 ]
 
+def use_mounted_agent?
+  system("buildkite-agent --version > /dev/null 2>&1")
+end
+
+def bk_meta_data_get(key)
+  if use_mounted_agent?
+    `buildkite-agent meta-data get "#{key}"`
+  else
+    # Use bk api for meta-data operations
+    result = `bk api get "/v2/organizations/#{ENV['BUILDKITE_ORGANIZATION_SLUG']}/pipelines/#{ENV['BUILDKITE_PIPELINE_SLUG']}/builds/#{ENV['BUILDKITE_BUILD_NUMBER']}/jobs/#{ENV['BUILDKITE_JOB_ID']}/meta_data/#{key}"`
+    JSON.parse(result)["value"] rescue ""
+  end
+end
+
+def bk_meta_data_set(key, value)
+  if use_mounted_agent?
+    `buildkite-agent meta-data set "#{key}" "#{value}"`
+  else
+    # Use bk api for meta-data operations
+    `bk api put "/v2/organizations/#{ENV['BUILDKITE_ORGANIZATION_SLUG']}/pipelines/#{ENV['BUILDKITE_PIPELINE_SLUG']}/builds/#{ENV['BUILDKITE_BUILD_NUMBER']}/jobs/#{ENV['BUILDKITE_JOB_ID']}/meta_data/#{key}" --data '{"value":"#{value}"}'`
+  end
+end
+
+def bk_pipeline_upload(pipeline_json)
+  if use_mounted_agent?
+    Open3.capture2("buildkite-agent pipeline upload --replace", stdin_data: pipeline_json)
+  else
+    # Use bk api for pipeline upload
+    Open3.capture2("bk api post \"/v2/organizations/#{ENV['BUILDKITE_ORGANIZATION_SLUG']}/pipelines/#{ENV['BUILDKITE_PIPELINE_SLUG']}/builds/#{ENV['BUILDKITE_BUILD_NUMBER']}/pipeline\" --data-raw '#{pipeline_json.gsub("'", "\\'")}'")
+  end
+end
+
+def bk_artifact_upload(file)
+  if use_mounted_agent?
+    system "buildkite-agent artifact upload #{file}"
+  else
+    # Note: Artifact upload via API is complex, for now fall back to curl
+    puts "Artifact upload via API not implemented yet for cross-platform"
+  end
+end
+
+def bk_annotate(content)
+  if use_mounted_agent?
+    Open3.capture2("buildkite-agent annotate", stdin_data: content)
+  else
+    # Use bk api for annotations
+    Open3.capture2("bk api post \"/v2/organizations/#{ENV['BUILDKITE_ORGANIZATION_SLUG']}/pipelines/#{ENV['BUILDKITE_PIPELINE_SLUG']}/builds/#{ENV['BUILDKITE_BUILD_NUMBER']}/annotations\" --data-raw '{\"body\":\"#{content.gsub('"', '\\"')}\",\"style\":\"info\"}'")
+  end
+end
+
+def meta_data_set_command(key, value)
+  if use_mounted_agent?
+    "buildkite-agent meta-data set \"#{key}\" \"#{value}\""
+  else
+    "bk api put \"/v2/organizations/$BUILDKITE_ORGANIZATION_SLUG/pipelines/$BUILDKITE_PIPELINE_SLUG/builds/$BUILDKITE_BUILD_NUMBER/jobs/$BUILDKITE_JOB_ID/meta_data/#{key}\" --data '{\"value\":\"#{value}\"}'"
+  end
+end
+
 def ask_for_key(i)
   mode = wait_for_mode
 
@@ -33,8 +91,8 @@ def ask_for_key(i)
           key: "step_#{i}",
           depends_on: i == 0 ? [] : "step_#{i - 1}",
           commands: [
-            %Q[buildkite-agent meta-data set "reason#{i}" "#{reason}"],
-            %Q[buildkite-agent meta-data set "key#{i}" "#{move[:value]}"]
+            meta_data_set_command("reason#{i}", reason),
+            meta_data_set_command("key#{i}", move[:value])
           ]
         }
       ]
@@ -50,8 +108,8 @@ def ask_for_key(i)
           key: "step_#{i}",
           depends_on: i == 0 ? [] : "step_#{i - 1}",
           commands: [
-            %Q[buildkite-agent meta-data set "reason#{i}" "#{reason}"],
-            %Q[buildkite-agent meta-data set "key#{i}" "#{move[:value]}"]
+            meta_data_set_command("reason#{i}", reason),
+            meta_data_set_command("key#{i}", move[:value])
           ]
         }
       ]
@@ -74,7 +132,7 @@ def ask_for_key(i)
 end
 
 def append_to_pipeline(pipeline)
-  Open3.capture2("buildkite-agent pipeline upload --replace", stdin_data: JSON.generate(pipeline))
+  bk_pipeline_upload(JSON.generate(pipeline))
 end
 
 def send_key(key)
@@ -89,7 +147,7 @@ end
 def wait_for_key(i)
   loop do
     puts "Getting metadata: key#{i}"
-    result = `buildkite-agent meta-data get key#{i}`
+    result = bk_meta_data_get("key#{i}")
     return result if result != ""
     sleep 0.5
   end
@@ -98,7 +156,7 @@ end
 def wait_for_mode
   loop do
     puts "Getting metadata: mode"
-    result = `buildkite-agent meta-data get mode`
+    result = bk_meta_data_get("mode")
     return result if result != ""
     sleep 0.5
   end
@@ -129,13 +187,13 @@ def grab_frames(i, duration)
 end
 
 def upload_clip(i)
-  reason = i == 0 ? "Game on." : `buildkite-agent meta-data get "reason#{i - 1}"`
+  reason = i == 0 ? "Game on." : bk_meta_data_get("reason#{i - 1}")
 
   # Smuggle the APNG in as a PNG, otherwise Camo blocks it.
   File.rename("#{i}.apng", "#{i}.png")
   file = "#{i}.png"
-  system "buildkite-agent artifact upload #{file}"
-  Open3.capture2("buildkite-agent annotate", stdin_data: %(<img class="block" width="640" height="480" src="artifact://#{file}"><p>#{reason}</p></div>))
+  bk_artifact_upload(file)
+  bk_annotate(%(<img class="block" width="640" height="480" src="artifact://#{file}"><p>#{reason}</p></div>))
 end
 
 def get_prompt()

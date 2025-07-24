@@ -38,12 +38,17 @@ Follow these steps to get going:
 1. [Create a new Buildkite pipeline](https://buildkite.com/new) and configure it to use your newly forked repo. Be sure to choose a self-hosted agent cluster.
 1. Navigate to **Agents** &raquo; **Your Cluster** &raquo; **Agent Tokens**.
 1. Create a new agent token and copy it to your clipboard.
-1. Create a `.env` file with your tokens:
+1. Set up your environment variables:
 
     ```bash
-    BUILDKITE_AGENT_TOKEN=your_buildkite_agent_token
-    ANTHROPIC_API_KEY=your_anthropic_api_key
+    cp .env.example .env
+    # Edit .env with your actual tokens
     ```
+
+    You'll need:
+    - **BUILDKITE_AGENT_TOKEN**: Your agent token (for running the agent)
+    - **BUILDKITE_API_TOKEN**: Your API token for cross-platform support (Mac agents)
+    - **ANTHROPIC_API_KEY**: Your Anthropic API key for AI mode
 
 1. Navigate to **Pipelines** &raquo; **Your Pipeline**, trigger a build with the **New Build** button, and start playing!
 

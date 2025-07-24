@@ -14,6 +14,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     chocolate-doom \
     && rm -rf /var/lib/apt/lists/*
 
+# Install Buildkite CLI for cross-platform support
+RUN curl -Lf -o /usr/local/bin/bk \
+    "https://github.com/buildkite/cli/releases/latest/download/bk-linux-amd64" \
+    && chmod +x /usr/local/bin/bk
+
 # Download DOOM shareware WAD
 RUN mkdir -p /usr/share/games/doom \
     && curl -L -o /tmp/doom.zip "https://www.doomworld.com/3ddownloads/ports/shareware_doom_iwad.zip" \

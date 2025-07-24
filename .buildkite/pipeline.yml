@@ -17,5 +17,7 @@ steps:
       - docker-compose#v5.10.0:
           run: doom-game
           mount-buildkite-agent: true
+          propagate-environment: true
           environment:
             - ANTHROPIC_API_KEY
+            - BUILDKITE_API_TOKEN
