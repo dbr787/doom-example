@@ -17,7 +17,9 @@ MOVES = [
 ]
 
 def ask_for_key(i)
+  puts "[#{Time.now.strftime('%H:%M:%S')}] Getting game mode..."
   mode = `buildkite-agent meta-data get "mode"`
+  puts "[#{Time.now.strftime('%H:%M:%S')}] Mode: #{mode.strip}"
 
   if mode == "ai" && !ENV["ANTHROPIC_API_KEY"].nil?
     file = "./prompt.txt"
@@ -28,22 +30,37 @@ def ask_for_key(i)
     move = MOVES.find {|m| m[:key] == result["move"]}
     reason = result["reason"]
 
-    # Set metadata directly and return key immediately
-    system(%Q[buildkite-agent meta-data set "reason#{i}" "#{reason}"])
-    system(%Q[buildkite-agent meta-data set "key#{i}" "#{move[:value]}"])
-    return move[:value]
-    
+    append_to_pipeline({
+      steps: [
+        {
+          label: "#{move[:emoji]} #{move[:label]}",
+          key: "step_#{i}",
+          depends_on: i == 0 ? [] : "step_#{i - 1}",
+          commands: [
+            %Q[buildkite-agent meta-data set "reason#{i}" "#{reason}"],
+            %Q[buildkite-agent meta-data set "key#{i}" "#{move[:value]}"]
+          ]
+        }
+      ]
+    })
   elsif mode == "random"
     move = MOVES.sample
     reason = "Totally random decision #{move[:description].downcase}."
 
-    # Set metadata directly and return key immediately
-    system(%Q[buildkite-agent meta-data set "reason#{i}" "#{reason}"])  
-    system(%Q[buildkite-agent meta-data set "key#{i}" "#{move[:value]}"])
-    return move[:value]
-    
+    append_to_pipeline({
+      steps: [
+        {
+          label: "#{move[:emoji]} #{move[:label]}",
+          key: "step_#{i}",
+          depends_on: i == 0 ? [] : "step_#{i - 1}",
+          commands: [
+            %Q[buildkite-agent meta-data set "reason#{i}" "#{reason}"],
+            %Q[buildkite-agent meta-data set "key#{i}" "#{move[:value]}"]
+          ]
+        }
+      ]
+    })
   else 
-    # Manual mode - create input step and return nil (will poll)
     append_to_pipeline({
       steps: [
         {
@@ -57,19 +74,26 @@ def ask_for_key(i)
         }
       ]
     })
-    return nil
   end
 end
 
 def append_to_pipeline(pipeline)
+  puts "[#{Time.now.strftime('%H:%M:%S')}] Uploading pipeline..."
+  start_time = Time.now
   Open3.capture2("buildkite-agent pipeline upload --replace", stdin_data: JSON.generate(pipeline))
+  puts "[#{Time.now.strftime('%H:%M:%S')}] Pipeline upload took #{(Time.now - start_time).round(2)}s"
 end
 
 def wait_for_key(i)
+  puts "[#{Time.now.strftime('%H:%M:%S')}] Waiting for key#{i}..."
+  start_time = Time.now
   loop do
-    puts "Getting metadata: key#{i}"
+    puts "[#{Time.now.strftime('%H:%M:%S')}] Polling metadata: key#{i}"
     result = `buildkite-agent meta-data get key#{i}`
-    return result if result != ""
+    if result != ""
+      puts "[#{Time.now.strftime('%H:%M:%S')}] Got key#{i} after #{(Time.now - start_time).round(2)}s: #{result}"
+      return result
+    end
     sleep 0.5
   end
 end
@@ -82,15 +106,21 @@ def ensure_docker_image
 end
 
 def run_doom_step(step, key)
-  puts "Running DOOM step #{step} with key: #{key || 'none'}"
+  puts "[#{Time.now.strftime('%H:%M:%S')}] Running DOOM step #{step} with key: #{key || 'none'}"
   
   ensure_docker_image
   
   # Use fresh container for each step (more reliable)
+  puts "[#{Time.now.strftime('%H:%M:%S')}] Starting Docker container..."
+  docker_start = Time.now
   system("docker run --rm -v $(pwd):/output doom-game #{step} '#{key}'")
+  puts "[#{Time.now.strftime('%H:%M:%S')}] Docker execution took #{(Time.now - docker_start).round(2)}s"
   
   # Host handles buildkite operations
+  puts "[#{Time.now.strftime('%H:%M:%S')}] Uploading artifacts and annotations..."
+  upload_start = Time.now
   upload_clip(step)
+  puts "[#{Time.now.strftime('%H:%M:%S')}] Upload/annotation took #{(Time.now - upload_start).round(2)}s"
 end
 
 def upload_clip(i)
@@ -149,10 +179,7 @@ i = 0
 key = nil
 loop do
   run_doom_step(i, key)
-  
-  # Get next key - either immediately (AI/random) or by polling (manual)
-  key = ask_for_key(i)
-  key = wait_for_key(i) if key.nil?
-  
+  ask_for_key(i)
+  key = wait_for_key(i)
   i += 1
 end
