@@ -96,59 +96,45 @@ def wait_for_key(i)
   end
 end
 
-def ensure_doom_running
-  return if @doom_pid
+def ensure_doom_container
+  return if @container_id
   
-  puts "Starting DOOM game..."
-  ENV["DISPLAY"] = ":1"
-
-  server_pid = spawn "Xvfb :1 -screen 0 320x240x24"
-  Process.detach(server_pid)
+  puts "Building Docker image..."
+  system("docker build -t doom-game .")
+  
+  puts "Starting persistent DOOM container..."
+  @container_id = `docker run -d -v $(pwd):/output doom-game sleep infinity`.strip
+  
+  puts "Initializing DOOM in container..."
+  # Start Xvfb and DOOM in the persistent container
+  system("docker exec -d #{@container_id} bash -c 'export DISPLAY=:1 && Xvfb :1 -screen 0 320x240x24'")
   sleep 1
-
-  @doom_pid = spawn "/usr/games/chocolate-doom -geometry 320x240 -iwad /usr/share/games/doom/DOOM1.WAD -episode 1"
-  Process.detach(@doom_pid)
+  system("docker exec -d #{@container_id} bash -c 'export DISPLAY=:1 && /usr/games/chocolate-doom -geometry 320x240 -iwad /usr/share/games/doom/DOOM1.WAD -episode 1'")
+  sleep 2
   
-  # Pause DOOM initially
-  signal_doom(@doom_pid, "STOP")
+  at_exit { system("docker rm -f #{@container_id}") if @container_id }
 end
 
 def run_doom_step(step, key)
   puts "Running DOOM step #{step} with key: #{key || 'none'}"
   
-  ensure_doom_running
+  ensure_doom_container
   
   duration = step == 0 ? 2.5 : 1.25
   
-  # Resume DOOM, send key, capture video, pause again
-  signal_doom(@doom_pid, "CONT")
-  recording = Thread.new { grab_frames(step, duration) }
-  send_key(key) if key
-  recording.join
-  signal_doom(@doom_pid, "STOP")
+  # Send key to persistent DOOM process
+  if key
+    delay = case key
+    when "Control_L", "space" then 100
+    else 1000
+    end
+    system("docker exec #{@container_id} xdotool key --delay #{delay} #{key}")
+  end
+  
+  # Capture video from persistent container
+  system("docker exec #{@container_id} bash -c 'ffmpeg -y -t #{duration} -video_size 320x240 -framerate 15 -f x11grab -i :1 -loop -1 /output/#{step}.apng'")
   
   upload_clip(step)
-end
-
-def send_key(key)
-  delay = case key
-  when "Control_L", "space" then 100
-  else 1000
-  end
-
-  system "xdotool key --delay #{delay} #{key}"
-end
-
-def signal_doom(pid, signal)
-  Process.kill(signal, pid)
-rescue Errno::ESRCH
-  # Ignore if process no longer exists
-end
-
-def grab_frames(step, duration)
-  system "ffmpeg -y -t #{duration} -video_size 320x240 -framerate 15 -f x11grab -i :1 -loop -1 #{step}.apng"
-  system "rm ./frame_*.png"
-  system "ffmpeg -i #{step}.apng -vsync 0 frame_%03d.png"
 end
 
 def upload_clip(i)
