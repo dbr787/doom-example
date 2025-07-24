@@ -15,9 +15,13 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 # Install Buildkite CLI for cross-platform support
-RUN curl -Lf -o /usr/local/bin/bk \
-    "https://github.com/buildkite/cli/releases/latest/download/bk-linux-amd64" \
-    && chmod +x /usr/local/bin/bk
+RUN LATEST_VERSION=$(curl -s https://api.github.com/repos/buildkite/cli/releases/latest | grep -o '"tag_name": "[^"]*"' | cut -d'"' -f4) \
+    && curl -Lf -o /tmp/bk.tar.gz \
+    "https://github.com/buildkite/cli/releases/download/${LATEST_VERSION}/bk_${LATEST_VERSION#v}_linux_amd64.tar.gz" \
+    && tar -xzf /tmp/bk.tar.gz -C /tmp \
+    && mv /tmp/bk /usr/local/bin/bk \
+    && chmod +x /usr/local/bin/bk \
+    && rm /tmp/bk.tar.gz
 
 # Download DOOM shareware WAD
 RUN mkdir -p /usr/share/games/doom \
