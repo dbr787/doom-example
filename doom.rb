@@ -53,10 +53,17 @@ end
 
 def bk_pipeline_upload(pipeline_json)
   if use_mounted_agent?
-    Open3.capture2("buildkite-agent pipeline upload --replace", stdin_data: pipeline_json)
+    puts "Uploading pipeline via buildkite-agent..."
+    result = Open3.capture2("buildkite-agent pipeline upload --replace", stdin_data: pipeline_json)
+    puts "Pipeline upload result: #{result[0]}" if result[0] && !result[0].empty?
   else
-    # Use curl for pipeline upload 
-    Open3.capture2("curl -s -H \"Authorization: Bearer $BUILDKITE_API_TOKEN\" -X POST \"https://api.buildkite.com/v2/organizations/$BUILDKITE_ORGANIZATION_SLUG/pipelines/$BUILDKITE_PIPELINE_SLUG/builds/$BUILDKITE_BUILD_NUMBER/pipeline\" -H \"Content-Type: application/json\" --data-raw '#{pipeline_json.gsub("'", "\\'")}'")
+    puts "Cannot upload dynamic pipeline steps without mounted buildkite-agent"
+    puts "Mac agents cannot create additional pipeline steps from within containers"
+    puts "Pipeline would be:"
+    puts pipeline_json
+    # The API approach doesn't work for dynamic pipeline uploads
+    # Dynamic pipeline upload requires buildkite-agent command access
+    return false
   end
 end
 
@@ -155,7 +162,20 @@ def ask_for_key(i)
 end
 
 def append_to_pipeline(pipeline)
-  bk_pipeline_upload(JSON.generate(pipeline))
+  upload_result = bk_pipeline_upload(JSON.generate(pipeline))
+  
+  # If pipeline upload failed (Mac agents), fall back to immediate execution
+  if upload_result == false
+    puts "Pipeline upload failed, executing immediately..."
+    
+    # Execute the commands from the pipeline step directly
+    if pipeline[:steps] && pipeline[:steps][0] && pipeline[:steps][0][:commands]
+      pipeline[:steps][0][:commands].each do |command|
+        puts "Executing: #{command}"
+        system(command)
+      end
+    end
+  end
 end
 
 def send_key(key)
