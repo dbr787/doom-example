@@ -119,7 +119,43 @@ def ensure_doom_container
   
   # Build and start container with DOOM running
   system("docker build -t doom-game . > /dev/null 2>&1")
-  @container_id = `docker run -d -v $(pwd):/output doom-game bash -c 'export DISPLAY=:1; Xvfb :1 -screen 0 320x240x24 & sleep 2; /usr/games/chocolate-doom -geometry 320x240 -iwad /usr/share/games/doom/DOOM1.WAD -episode 1 & sleep infinity'`.strip
+  
+  # Create startup script that keeps processes alive
+  startup_script = <<~SCRIPT
+    #!/bin/bash
+    set -e
+    export DISPLAY=:1
+    
+    # Start Xvfb and wait for it
+    Xvfb :1 -screen 0 320x240x24 &
+    XVFB_PID=$!
+    sleep 2
+    
+    # Start DOOM and wait for it  
+    /usr/games/chocolate-doom -geometry 320x240 -iwad /usr/share/games/doom/DOOM1.WAD -episode 1 &
+    DOOM_PID=$!
+    sleep 2
+    
+    # Keep container alive and monitor processes
+    while true; do
+      if ! kill -0 $XVFB_PID 2>/dev/null; then
+        echo "Xvfb died, restarting..."
+        Xvfb :1 -screen 0 320x240x24 &
+        XVFB_PID=$!
+      fi
+      if ! kill -0 $DOOM_PID 2>/dev/null; then
+        echo "DOOM died, restarting..."
+        /usr/games/chocolate-doom -geometry 320x240 -iwad /usr/share/games/doom/DOOM1.WAD -episode 1 &
+        DOOM_PID=$!
+      fi
+      sleep 5
+    done
+  SCRIPT
+  
+  File.write("startup.sh", startup_script)
+  system("chmod +x startup.sh")
+  
+  @container_id = `docker run -d -v $(pwd):/output -v $(pwd)/startup.sh:/startup.sh doom-game /startup.sh`.strip
   
   puts "Started new container: #{@container_id}"
   sleep 3  # Give DOOM time to start
