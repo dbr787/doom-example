@@ -37,8 +37,8 @@ def ask_for_key(i)
           key: "step_#{i}",
           depends_on: i == 0 ? [] : "step_#{i - 1}",
           commands: [
-            %Q[buildkite-agent meta-data set "reason#{i}" "#{reason}"],
-            %Q[buildkite-agent meta-data set "key#{i}" "#{move[:value]}"]
+            %Q[echo "[$(date +'%H:%M:%S')] Setting reason#{i}..." && time buildkite-agent meta-data set "reason#{i}" "#{reason}"],
+            %Q[echo "[$(date +'%H:%M:%S')] Setting key#{i}..." && time buildkite-agent meta-data set "key#{i}" "#{move[:value]}"]
           ]
         }
       ]
@@ -54,8 +54,8 @@ def ask_for_key(i)
           key: "step_#{i}",
           depends_on: i == 0 ? [] : "step_#{i - 1}",
           commands: [
-            %Q[buildkite-agent meta-data set "reason#{i}" "#{reason}"],
-            %Q[buildkite-agent meta-data set "key#{i}" "#{move[:value]}"]
+            %Q[echo "[$(date +'%H:%M:%S')] Setting reason#{i}..." && time buildkite-agent meta-data set "reason#{i}" "#{reason}"],
+            %Q[echo "[$(date +'%H:%M:%S')] Setting key#{i}..." && time buildkite-agent meta-data set "key#{i}" "#{move[:value]}"]
           ]
         }
       ]
