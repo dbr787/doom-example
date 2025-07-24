@@ -1,0 +1,22 @@
+#!/bin/bash
+
+# Upload artifacts created by the Doom step for cross-platform compatibility
+if [[ "$BUILDKITE_STEP_KEY" == "run-doom" ]]; then
+  echo "Uploading move data artifacts..."
+  
+  # Upload any files matching the move data pattern
+  if ls *__*.txt 1> /dev/null 2>&1; then
+    buildkite-agent artifact upload "*__*.txt"
+    echo "Uploaded move data artifacts"
+  else
+    echo "No move data artifacts found to upload"
+  fi
+  
+  # Upload any screenshot files
+  if ls *.png 1> /dev/null 2>&1; then
+    buildkite-agent artifact upload "*.png"
+    echo "Uploaded screenshot artifacts"
+  else
+    echo "No screenshot artifacts found to upload"
+  fi
+fi
