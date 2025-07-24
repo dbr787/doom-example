@@ -58,9 +58,11 @@ def bk_artifact_upload(file)
   if use_mounted_agent?
     system "buildkite-agent artifact upload #{file}"
   else
-    # Upload artifact via API
-    puts "Uploading artifact #{file} via API"
-    system "curl -s -H \"Authorization: Bearer $BUILDKITE_API_TOKEN\" -X POST \"https://api.buildkite.com/v2/organizations/$BUILDKITE_ORGANIZATION_SLUG/pipelines/$BUILDKITE_PIPELINE_SLUG/builds/$BUILDKITE_BUILD_NUMBER/artifacts\" -F \"file=@#{file}\""
+    # Note: The Buildkite REST API doesn't support artifact uploads
+    # Artifacts are typically uploaded by the agent during build execution
+    # For cross-platform compatibility, we'll skip artifact upload and rely on the filename encoding
+    puts "Skipping artifact upload via API (not supported by Buildkite REST API)"
+    puts "File #{file} created for cross-platform data storage"
   end
 end
 
