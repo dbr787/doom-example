@@ -16,5 +16,5 @@ steps:
     depends_on: mode
     timeout_in_minutes: 30
     command: "./doom.rb"
-    environment:
-      - ANTHROPIC_API_KEY
+    env:
+      ANTHROPIC_API_KEY: $ANTHROPIC_API_KEY
