@@ -170,11 +170,18 @@ def wait_for_key(i)
 end
 
 def wait_for_mode
-  loop do
-    puts "Getting metadata: mode"
-    result = get_move_data("mode")
-    return result if result != ""
-    sleep 0.5
+  if use_mounted_agent?
+    loop do
+      puts "Getting metadata: mode"
+      result = `buildkite-agent meta-data get "mode"`
+      return result if result != ""
+      sleep 0.5
+    end
+  else
+    puts "❌ Mac agents not fully supported yet."
+    puts "💡 The game moves will work cross-platform, but reading the initial mode requires Linux agents."
+    puts "🐧 Please use a Linux agent or add 'queue: linux' to your pipeline."
+    exit 1
   end
 end
 

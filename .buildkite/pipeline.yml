@@ -12,12 +12,8 @@ steps:
           - label: Let Claude run the show
             value: ai
 
-  - label: ":gear: Setup Mode"
-    depends_on: mode
-    command: "echo $mode > mode__$mode.txt"
-    artifact_paths: ["mode__*.txt"]
-
   - label: ":rage4: Run Doom"
+    depends_on: mode
     plugins:
       - docker-compose#v5.10.0:
           run: doom-game
