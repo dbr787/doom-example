@@ -45,4 +45,4 @@ USER doom
 WORKDIR /tmp
 
 # Container script will be called by host with arguments
-ENTRYPOINT ["./doom_container.rb"]
+ENTRYPOINT ["/app/doom_container.rb"]
