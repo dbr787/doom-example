@@ -91,14 +91,11 @@ end
 def run_doom_step(step, key)
   puts "Running DOOM step #{step} with key: #{key || 'none'}"
   
-  # Build image if it doesn't exist
-  unless system("docker image inspect doom-game > /dev/null 2>&1")
-    puts "Building Docker image..."
-    system("docker build -t doom-game .")
-  end
+  # Build image (uses Docker layer caching)
+  system("docker build -t doom-game .")
   
   # Use container for DOOM execution
-  system("docker run --rm -v $(pwd):/output doom-game ./doom_container.rb #{step} '#{key}'")
+  system("docker run --rm -v $(pwd):/output doom-game #{step} '#{key}'")
   
   # Host handles buildkite operations
   upload_clip(step)
