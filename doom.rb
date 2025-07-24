@@ -96,7 +96,7 @@ def wait_for_key(i)
 end
 
 def start_doom
-  ENV["DISPLAY"] = ":1"
+  
 
   server_pid = spawn "Xvfb :1 -screen 0 320x240x24"
   Process.detach(server_pid)

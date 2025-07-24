@@ -1,5 +1,3 @@
 services:
   doom-game:
     build: .
-    environment:
-      - DISPLAY=:1

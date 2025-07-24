@@ -45,21 +45,9 @@ Follow these steps to get going:
     ANTHROPIC_API_KEY=your_anthropic_api_key
     ```
 
-1. Build the doom game container:
-
-    ```bash
-    docker-compose build doom-game
-    ```
-
-1. Start the Buildkite agent:
-
-    ```bash
-    docker-compose up buildkite-agent
-    ```
-
 1. Navigate to **Pipelines** &raquo; **Your Pipeline**, trigger a build with the **New Build** button, and start playing!
 
-The agent will automatically use the doom-game container when running pipeline steps.
+The pipeline will automatically build and run the doom-game container.
 
 ### Option 2: Using Docker directly
 
