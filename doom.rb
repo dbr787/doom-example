@@ -25,7 +25,9 @@ def get_move_data(key)
     # Use artifacts as move data store - list artifacts, find by filename pattern key__value.txt
     result = `curl -s -H "Authorization: Bearer $BUILDKITE_API_TOKEN" "https://api.buildkite.com/v2/organizations/$BUILDKITE_ORGANIZATION_SLUG/pipelines/$BUILDKITE_PIPELINE_SLUG/builds/$BUILDKITE_BUILD_NUMBER/artifacts"`
     artifacts = JSON.parse(result) rescue []
-    found = artifacts.find { |a| a["filename"].start_with?("#{key}__") && a["filename"].end_with?(".txt") }
+    # Handle case where artifacts is not an array of hashes
+    return "" unless artifacts.is_a?(Array) && artifacts.all? { |a| a.is_a?(Hash) }
+    found = artifacts.find { |a| a["filename"] && a["filename"].start_with?("#{key}__") && a["filename"].end_with?(".txt") }
     found ? found["filename"].sub("#{key}__", "").sub(".txt", "") : ""
   end
 end
