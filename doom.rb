@@ -58,8 +58,9 @@ def bk_artifact_upload(file)
   if use_mounted_agent?
     system "buildkite-agent artifact upload #{file}"
   else
-    # Note: Artifact upload via API is complex, for now fall back to curl
-    puts "Artifact upload via API not implemented yet for cross-platform"
+    # Upload artifact via API
+    puts "Uploading artifact #{file} via API"
+    system "curl -s -H \"Authorization: Bearer $BUILDKITE_API_TOKEN\" -X POST \"https://api.buildkite.com/v2/organizations/$BUILDKITE_ORGANIZATION_SLUG/pipelines/$BUILDKITE_PIPELINE_SLUG/builds/$BUILDKITE_BUILD_NUMBER/artifacts\" -F \"file=@#{file}\""
   end
 end
 
