@@ -172,18 +172,7 @@ end
 def wait_for_mode
   loop do
     puts "Getting metadata: mode"
-    # Mode always comes from Buildkite input step, which uses metadata regardless of agent type
-    # So we need to use the REST API to read build metadata, not artifacts
-    if use_mounted_agent?
-      result = `buildkite-agent meta-data get "mode"`
-    else
-      # Use GraphQL API to read build metadata
-      result = `curl -s -H "Authorization: Bearer $BUILDKITE_API_TOKEN" -H "Content-Type: application/json" -d '{"query":"query{build(uuid:\\"$BUILDKITE_BUILD_ID\\"){metaData{key value}}}"}' "https://graphql.buildkite.com/v1"`
-      data = JSON.parse(result) rescue {}
-      metadata = data.dig("data", "build", "metaData") || []
-      found = metadata.find { |m| m["key"] == "mode" }
-      result = found ? found["value"] : ""
-    end
+    result = get_move_data("mode")
     return result if result != ""
     sleep 0.5
   end
