@@ -1,20 +1,9 @@
 steps:
-  - input: ":video_game: How to play?"
-    key: mode
-    fields:
-      - select: Game mode
-        key: mode
-        options:
-          - label: Prompt me for every move
-            value: manual
-          - label: Choose moves completely at random
-            value: random
-          - label: Let Claude run the show
-            value: ai
-
-  - label: ":rage4: Run Doom"
-    depends_on: mode
-    timeout_in_minutes: 30
-    command: "./doom.rb"
+  - label: "🎮 DOOM Game"
+    commands:
+      - "sudo apt-get update && sudo apt-get install -y xvfb xdotool ffmpeg chocolate-doom curl unzip"
+      - "./doom_simple.rb"
     env:
-      ANTHROPIC_API_KEY: $ANTHROPIC_API_KEY
+      DISPLAY: ":99"
+    agents:
+      queue: "default"
