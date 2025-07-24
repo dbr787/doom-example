@@ -74,26 +74,20 @@ def wait_for_key(i)
   end
 end
 
-def ensure_docker_container
-  return if @container_id
-  
+def ensure_docker_image
+  return if @image_built
   puts "Building Docker image..."
   system("docker build -t doom-game .")
-  
-  puts "Starting DOOM container..."
-  @container_id = `docker run -d -v $(pwd):/output doom-game sleep infinity`.strip
-  
-  # Setup signal handling to cleanup container
-  at_exit { system("docker rm -f #{@container_id}") if @container_id }
+  @image_built = true
 end
 
 def run_doom_step(step, key)
   puts "Running DOOM step #{step} with key: #{key || 'none'}"
   
-  ensure_docker_container
+  ensure_docker_image
   
-  # Execute DOOM step in running container
-  system("docker exec #{@container_id} /app/doom_container.rb #{step} '#{key}'")
+  # Use fresh container for each step (more reliable)
+  system("docker run --rm -v $(pwd):/output doom-game #{step} '#{key}'")
   
   # Host handles buildkite operations
   upload_clip(step)
