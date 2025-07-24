@@ -28,37 +28,22 @@ def ask_for_key(i)
     move = MOVES.find {|m| m[:key] == result["move"]}
     reason = result["reason"]
 
-    append_to_pipeline({
-      steps: [
-        {
-          label: "#{move[:emoji]} #{move[:label]}",
-          key: "step_#{i}",
-          depends_on: i == 0 ? [] : "step_#{i - 1}",
-          commands: [
-            %Q[buildkite-agent meta-data set "reason#{i}" "#{reason}"],
-            %Q[buildkite-agent meta-data set "key#{i}" "#{move[:value]}"]
-          ]
-        }
-      ]
-    })
+    # Set metadata directly and return key immediately
+    system(%Q[buildkite-agent meta-data set "reason#{i}" "#{reason}"])
+    system(%Q[buildkite-agent meta-data set "key#{i}" "#{move[:value]}"])
+    return move[:value]
+    
   elsif mode == "random"
     move = MOVES.sample
     reason = "Totally random decision #{move[:description].downcase}."
 
-    append_to_pipeline({
-      steps: [
-        {
-          label: "#{move[:emoji]} #{move[:label]}",
-          key: "step_#{i}",
-          depends_on: i == 0 ? [] : "step_#{i - 1}",
-          commands: [
-            %Q[buildkite-agent meta-data set "reason#{i}" "#{reason}"],
-            %Q[buildkite-agent meta-data set "key#{i}" "#{move[:value]}"]
-          ]
-        }
-      ]
-    })
+    # Set metadata directly and return key immediately
+    system(%Q[buildkite-agent meta-data set "reason#{i}" "#{reason}"])  
+    system(%Q[buildkite-agent meta-data set "key#{i}" "#{move[:value]}"])
+    return move[:value]
+    
   else 
+    # Manual mode - create input step and return nil (will poll)
     append_to_pipeline({
       steps: [
         {
@@ -72,6 +57,7 @@ def ask_for_key(i)
         }
       ]
     })
+    return nil
   end
 end
 
@@ -88,14 +74,26 @@ def wait_for_key(i)
   end
 end
 
+def ensure_docker_container
+  return if @container_id
+  
+  puts "Building Docker image..."
+  system("docker build -t doom-game .")
+  
+  puts "Starting DOOM container..."
+  @container_id = `docker run -d -v $(pwd):/output doom-game sleep infinity`.strip
+  
+  # Setup signal handling to cleanup container
+  at_exit { system("docker rm -f #{@container_id}") if @container_id }
+end
+
 def run_doom_step(step, key)
   puts "Running DOOM step #{step} with key: #{key || 'none'}"
   
-  # Build image (uses Docker layer caching)
-  system("docker build -t doom-game .")
+  ensure_docker_container
   
-  # Use container for DOOM execution
-  system("docker run --rm -v $(pwd):/output doom-game #{step} '#{key}'")
+  # Execute DOOM step in running container
+  system("docker exec #{@container_id} /app/doom_container.rb #{step} '#{key}'")
   
   # Host handles buildkite operations
   upload_clip(step)
@@ -157,7 +155,10 @@ i = 0
 key = nil
 loop do
   run_doom_step(i, key)
-  ask_for_key(i)
-  key = wait_for_key(i)
+  
+  # Get next key - either immediately (AI/random) or by polling (manual)
+  key = ask_for_key(i)
+  key = wait_for_key(i) if key.nil?
+  
   i += 1
 end
