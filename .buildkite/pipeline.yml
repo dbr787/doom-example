@@ -12,8 +12,15 @@ steps:
           - label: Let Claude run the show
             value: ai
 
-  - label: ":rage4: Run Doom"
+  - label: ":gear: Setup Mode"
     depends_on: mode
+    command: |
+      MODE=$(buildkite-agent meta-data get "mode")
+      echo "$MODE" > "mode__$MODE.txt"
+    artifact_paths: ["mode__*.txt"]
+
+  - label: ":rage4: Run Doom"
+    depends_on: ":gear: Setup Mode"
     plugins:
       - docker-compose#v5.10.0:
           run: doom-game
