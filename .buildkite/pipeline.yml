@@ -13,7 +13,6 @@ steps:
             value: ai
 
   - label: ":rage4: Run Doom"
-    depends_on: mode
     plugins:
       - docker-compose#v5.10.0:
           run: doom-game

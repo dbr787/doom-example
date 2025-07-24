@@ -15,7 +15,7 @@ MOVES = [
 ]
 
 def ask_for_key(i)
-  mode = `buildkite-agent meta-data get "mode"`
+  mode = wait_for_mode
 
   if mode == "ai" && !ENV["ANTHROPIC_API_KEY"].nil?
     file = "./prompt.txt"
@@ -90,6 +90,15 @@ def wait_for_key(i)
   loop do
     puts "Getting metadata: key#{i}"
     result = `buildkite-agent meta-data get key#{i}`
+    return result if result != ""
+    sleep 0.5
+  end
+end
+
+def wait_for_mode
+  loop do
+    puts "Getting metadata: mode"
+    result = `buildkite-agent meta-data get mode`
     return result if result != ""
     sleep 0.5
   end
