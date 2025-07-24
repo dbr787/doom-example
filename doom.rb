@@ -97,19 +97,22 @@ def wait_for_key(i)
 end
 
 def ensure_doom_container
-  return @container_id if @container_id
+  # Check if container exists and is running
+  if @container_id && `docker inspect -f '{{.State.Running}}' #{@container_id} 2>/dev/null`.strip == "true"
+    return @container_id
+  end
   
-  # Build and start persistent container
+  # Clean up dead container
+  system("docker rm -f #{@container_id} 2>/dev/null") if @container_id
+  
+  # Build and start container with DOOM running
   system("docker build -t doom-game . > /dev/null 2>&1")
-  @container_id = `docker run -d -v $(pwd):/output doom-game sleep infinity`.strip
+  @container_id = `docker run -d -v $(pwd):/output doom-game bash -c 'export DISPLAY=:1; Xvfb :1 -screen 0 320x240x24 & sleep 2; /usr/games/chocolate-doom -geometry 320x240 -iwad /usr/share/games/doom/DOOM1.WAD -episode 1 & sleep infinity'`.strip
   
-  # Start DOOM in the container
-  system("docker exec -d #{@container_id} bash -c 'export DISPLAY=:1 && Xvfb :1 -screen 0 320x240x24 &'")
-  sleep 1
-  system("docker exec -d #{@container_id} bash -c 'export DISPLAY=:1 && /usr/games/chocolate-doom -geometry 320x240 -iwad /usr/share/games/doom/DOOM1.WAD -episode 1 &'")
-  sleep 2
+  puts "Started container: #{@container_id}"
+  sleep 3  # Give DOOM time to start
   
-  at_exit { system("docker rm -f #{@container_id}") }
+  at_exit { system("docker rm -f #{@container_id} 2>/dev/null") }
   @container_id
 end
 
