@@ -17,9 +17,7 @@ MOVES = [
 ]
 
 def ask_for_key(i)
-  puts "[#{Time.now.strftime('%H:%M:%S')}] Getting game mode..."
   mode = `buildkite-agent meta-data get "mode"`
-  puts "[#{Time.now.strftime('%H:%M:%S')}] Mode: #{mode.strip}"
 
   if mode == "ai" && !ENV["ANTHROPIC_API_KEY"].nil?
     file = "./prompt.txt"
@@ -98,29 +96,59 @@ def wait_for_key(i)
   end
 end
 
-def ensure_docker_image
-  return if @image_built
-  puts "Building Docker image..."
-  system("docker build -t doom-game .")
-  @image_built = true
+def ensure_doom_running
+  return if @doom_pid
+  
+  puts "Starting DOOM game..."
+  ENV["DISPLAY"] = ":1"
+
+  server_pid = spawn "Xvfb :1 -screen 0 320x240x24"
+  Process.detach(server_pid)
+  sleep 1
+
+  @doom_pid = spawn "/usr/games/chocolate-doom -geometry 320x240 -iwad /usr/share/games/doom/DOOM1.WAD -episode 1"
+  Process.detach(@doom_pid)
+  
+  # Pause DOOM initially
+  signal_doom(@doom_pid, "STOP")
 end
 
 def run_doom_step(step, key)
-  puts "[#{Time.now.strftime('%H:%M:%S')}] Running DOOM step #{step} with key: #{key || 'none'}"
+  puts "Running DOOM step #{step} with key: #{key || 'none'}"
   
-  ensure_docker_image
+  ensure_doom_running
   
-  # Use fresh container for each step (more reliable)
-  puts "[#{Time.now.strftime('%H:%M:%S')}] Starting Docker container..."
-  docker_start = Time.now
-  system("docker run --rm -v $(pwd):/output doom-game #{step} '#{key}'")
-  puts "[#{Time.now.strftime('%H:%M:%S')}] Docker execution took #{(Time.now - docker_start).round(2)}s"
+  duration = step == 0 ? 2.5 : 1.25
   
-  # Host handles buildkite operations
-  puts "[#{Time.now.strftime('%H:%M:%S')}] Uploading artifacts and annotations..."
-  upload_start = Time.now
+  # Resume DOOM, send key, capture video, pause again
+  signal_doom(@doom_pid, "CONT")
+  recording = Thread.new { grab_frames(step, duration) }
+  send_key(key) if key
+  recording.join
+  signal_doom(@doom_pid, "STOP")
+  
   upload_clip(step)
-  puts "[#{Time.now.strftime('%H:%M:%S')}] Upload/annotation took #{(Time.now - upload_start).round(2)}s"
+end
+
+def send_key(key)
+  delay = case key
+  when "Control_L", "space" then 100
+  else 1000
+  end
+
+  system "xdotool key --delay #{delay} #{key}"
+end
+
+def signal_doom(pid, signal)
+  Process.kill(signal, pid)
+rescue Errno::ESRCH
+  # Ignore if process no longer exists
+end
+
+def grab_frames(step, duration)
+  system "ffmpeg -y -t #{duration} -video_size 320x240 -framerate 15 -f x11grab -i :1 -loop -1 #{step}.apng"
+  system "rm ./frame_*.png"
+  system "ffmpeg -i #{step}.apng -vsync 0 frame_%03d.png"
 end
 
 def upload_clip(i)
