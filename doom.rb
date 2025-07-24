@@ -106,11 +106,11 @@ def ensure_doom_container
   @container_id = `docker run -d -v $(pwd):/output doom-game sleep infinity`.strip
   
   puts "Initializing DOOM in container..."
-  # Start Xvfb and DOOM in the persistent container
-  system("docker exec -d #{@container_id} bash -c 'export DISPLAY=:1 && Xvfb :1 -screen 0 320x240x24'")
-  sleep 1
-  system("docker exec -d #{@container_id} bash -c 'export DISPLAY=:1 && /usr/games/chocolate-doom -geometry 320x240 -iwad /usr/share/games/doom/DOOM1.WAD -episode 1'")
+  # Start Xvfb and DOOM with proper backgrounding
+  system("docker exec -d #{@container_id} bash -c 'export DISPLAY=:1 && nohup Xvfb :1 -screen 0 320x240x24 > /dev/null 2>&1 &'")
   sleep 2
+  system("docker exec -d #{@container_id} bash -c 'export DISPLAY=:1 && nohup /usr/games/chocolate-doom -geometry 320x240 -iwad /usr/share/games/doom/DOOM1.WAD -episode 1 > /dev/null 2>&1 &'")
+  sleep 3
   
   at_exit { system("docker rm -f #{@container_id}") if @container_id }
 end
@@ -120,6 +120,16 @@ def run_doom_step(step, key)
   
   ensure_doom_container
   
+  # Check if container is still running
+  running = `docker inspect -f '{{.State.Running}}' #{@container_id}`.strip
+  puts "Container running: #{running}"
+  
+  if running != "true"
+    puts "Container died! Restarting..."
+    @container_id = nil
+    ensure_doom_container
+  end
+  
   duration = step == 0 ? 2.5 : 1.25
   
   # Send key to persistent DOOM process
@@ -128,10 +138,12 @@ def run_doom_step(step, key)
     when "Control_L", "space" then 100
     else 1000
     end
+    puts "Sending key: #{key}"
     system("docker exec #{@container_id} xdotool key --delay #{delay} #{key}")
   end
   
   # Capture video from persistent container
+  puts "Capturing video..."
   system("docker exec #{@container_id} bash -c 'ffmpeg -y -t #{duration} -video_size 320x240 -framerate 15 -f x11grab -i :1 -loop -1 /output/#{step}.apng'")
   
   upload_clip(step)
