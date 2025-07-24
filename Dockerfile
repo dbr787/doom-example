@@ -14,14 +14,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     chocolate-doom \
     && rm -rf /var/lib/apt/lists/*
 
-# Install Buildkite CLI for cross-platform support
-RUN LATEST_VERSION=$(curl -s https://api.github.com/repos/buildkite/cli/releases/latest | grep -o '"tag_name": "[^"]*"' | cut -d'"' -f4) \
-    && curl -Lf -o /tmp/bk.tar.gz \
-    "https://github.com/buildkite/cli/releases/download/${LATEST_VERSION}/bk_${LATEST_VERSION#v}_linux_amd64.tar.gz" \
-    && tar -xzf /tmp/bk.tar.gz -C /tmp \
-    && mv /tmp/bk /usr/local/bin/bk \
-    && chmod +x /usr/local/bin/bk \
-    && rm /tmp/bk.tar.gz
+# curl is already installed above for cross-platform REST API support
 
 # Download DOOM shareware WAD
 RUN mkdir -p /usr/share/games/doom \

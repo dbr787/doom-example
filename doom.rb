@@ -18,22 +18,28 @@ def use_mounted_agent?
   system("buildkite-agent --version > /dev/null 2>&1")
 end
 
-def bk_meta_data_get(key)
+def get_move_data(key)
   if use_mounted_agent?
     `buildkite-agent meta-data get "#{key}"`
   else
-    # Use bk api for meta-data operations
-    result = `bk api get "/v2/organizations/#{ENV['BUILDKITE_ORGANIZATION_SLUG']}/pipelines/#{ENV['BUILDKITE_PIPELINE_SLUG']}/builds/#{ENV['BUILDKITE_BUILD_NUMBER']}/jobs/#{ENV['BUILDKITE_JOB_ID']}/meta_data/#{key}"`
-    JSON.parse(result)["value"] rescue ""
+    # Use artifacts as move data store - list artifacts, find by filename pattern key__value.txt
+    result = `curl -s -H "Authorization: Bearer $BUILDKITE_API_TOKEN" "https://api.buildkite.com/v2/organizations/$BUILDKITE_ORGANIZATION_SLUG/pipelines/$BUILDKITE_PIPELINE_SLUG/builds/$BUILDKITE_BUILD_NUMBER/artifacts"`
+    artifacts = JSON.parse(result) rescue []
+    found = artifacts.find { |a| a["filename"].start_with?("#{key}__") && a["filename"].end_with?(".txt") }
+    found ? found["filename"].sub("#{key}__", "").sub(".txt", "") : ""
   end
 end
 
-def bk_meta_data_set(key, value)
+def set_move_data(key, value)
   if use_mounted_agent?
     `buildkite-agent meta-data set "#{key}" "#{value}"`
   else
-    # Use bk api for meta-data operations
-    `bk api put "/v2/organizations/#{ENV['BUILDKITE_ORGANIZATION_SLUG']}/pipelines/#{ENV['BUILDKITE_PIPELINE_SLUG']}/builds/#{ENV['BUILDKITE_BUILD_NUMBER']}/jobs/#{ENV['BUILDKITE_JOB_ID']}/meta_data/#{key}" --data '{"value":"#{value}"}'`
+    # Use artifacts as move data store - create file and upload as artifact
+    filename = "#{key}__#{value}.txt"
+    File.write(filename, "")  # Empty file, value encoded in filename
+    # Note: This would need buildkite-agent artifact upload, so this function 
+    # won't work cross-platform. Use move_data_set_command in pipeline steps instead.
+    puts "Warning: set_move_data not supported cross-platform, use move_data_set_command in pipeline steps"
   end
 end
 
@@ -41,8 +47,8 @@ def bk_pipeline_upload(pipeline_json)
   if use_mounted_agent?
     Open3.capture2("buildkite-agent pipeline upload --replace", stdin_data: pipeline_json)
   else
-    # Use bk api for pipeline upload
-    Open3.capture2("bk api post \"/v2/organizations/#{ENV['BUILDKITE_ORGANIZATION_SLUG']}/pipelines/#{ENV['BUILDKITE_PIPELINE_SLUG']}/builds/#{ENV['BUILDKITE_BUILD_NUMBER']}/pipeline\" --data-raw '#{pipeline_json.gsub("'", "\\'")}'")
+    # Use curl for pipeline upload 
+    Open3.capture2("curl -s -H \"Authorization: Bearer $BUILDKITE_API_TOKEN\" -X POST \"https://api.buildkite.com/v2/organizations/$BUILDKITE_ORGANIZATION_SLUG/pipelines/$BUILDKITE_PIPELINE_SLUG/builds/$BUILDKITE_BUILD_NUMBER/pipeline\" -H \"Content-Type: application/json\" --data-raw '#{pipeline_json.gsub("'", "\\'")}'")
   end
 end
 
@@ -59,16 +65,16 @@ def bk_annotate(content)
   if use_mounted_agent?
     Open3.capture2("buildkite-agent annotate", stdin_data: content)
   else
-    # Use bk api for annotations
-    Open3.capture2("bk api post \"/v2/organizations/#{ENV['BUILDKITE_ORGANIZATION_SLUG']}/pipelines/#{ENV['BUILDKITE_PIPELINE_SLUG']}/builds/#{ENV['BUILDKITE_BUILD_NUMBER']}/annotations\" --data-raw '{\"body\":\"#{content.gsub('"', '\\"')}\",\"style\":\"info\"}'")
+    # Use curl for annotations
+    Open3.capture2("curl -s -H \"Authorization: Bearer $BUILDKITE_API_TOKEN\" -X POST \"https://api.buildkite.com/v2/organizations/$BUILDKITE_ORGANIZATION_SLUG/pipelines/$BUILDKITE_PIPELINE_SLUG/builds/$BUILDKITE_BUILD_NUMBER/annotations\" -H \"Content-Type: application/json\" --data-raw '{\"body\":\"#{content.gsub('"', '\\"')}\",\"style\":\"info\"}'")
   end
 end
 
-def meta_data_set_command(key, value)
+def move_data_set_command(key, value)
   if use_mounted_agent?
     "buildkite-agent meta-data set \"#{key}\" \"#{value}\""
   else
-    "bk api put \"/v2/organizations/$BUILDKITE_ORGANIZATION_SLUG/pipelines/$BUILDKITE_PIPELINE_SLUG/builds/$BUILDKITE_BUILD_NUMBER/jobs/$BUILDKITE_JOB_ID/meta_data/#{key}\" --data '{\"value\":\"#{value}\"}'"
+    "echo \"#{value.gsub('"', '\\"')}\" > #{key}__#{value}.txt"
   end
 end
 
@@ -91,9 +97,13 @@ def ask_for_key(i)
           key: "step_#{i}",
           depends_on: i == 0 ? [] : "step_#{i - 1}",
           commands: [
-            meta_data_set_command("reason#{i}", reason),
-            meta_data_set_command("key#{i}", move[:value])
+            move_data_set_command("reason#{i}", reason),
+            move_data_set_command("key#{i}", move[:value])
           ]
+        }.tap { |step| 
+          # Always add artifact_paths for cross-platform support
+          # Pipeline steps might run on different agents than the main step
+          step[:artifact_paths] = ["reason#{i}__*.txt", "key#{i}__*.txt"]
         }
       ]
     })
@@ -108,9 +118,13 @@ def ask_for_key(i)
           key: "step_#{i}",
           depends_on: i == 0 ? [] : "step_#{i - 1}",
           commands: [
-            meta_data_set_command("reason#{i}", reason),
-            meta_data_set_command("key#{i}", move[:value])
+            move_data_set_command("reason#{i}", reason),
+            move_data_set_command("key#{i}", move[:value])
           ]
+        }.tap { |step| 
+          # Always add artifact_paths for cross-platform support
+          # Pipeline steps might run on different agents than the main step
+          step[:artifact_paths] = ["reason#{i}__*.txt", "key#{i}__*.txt"]
         }
       ]
     })
@@ -147,7 +161,7 @@ end
 def wait_for_key(i)
   loop do
     puts "Getting metadata: key#{i}"
-    result = bk_meta_data_get("key#{i}")
+    result = get_move_data("key#{i}")
     return result if result != ""
     sleep 0.5
   end
@@ -156,7 +170,7 @@ end
 def wait_for_mode
   loop do
     puts "Getting metadata: mode"
-    result = bk_meta_data_get("mode")
+    result = get_move_data("mode")
     return result if result != ""
     sleep 0.5
   end
@@ -187,7 +201,7 @@ def grab_frames(i, duration)
 end
 
 def upload_clip(i)
-  reason = i == 0 ? "Game on." : bk_meta_data_get("reason#{i - 1}")
+  reason = i == 0 ? "Game on." : get_move_data("reason#{i - 1}")
 
   # Smuggle the APNG in as a PNG, otherwise Camo blocks it.
   File.rename("#{i}.apng", "#{i}.png")
