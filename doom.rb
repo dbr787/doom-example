@@ -114,23 +114,11 @@ def ask_for_key(i)
     move = MOVES.sample
     reason = "Totally random decision #{move[:description].downcase}."
 
-    append_to_pipeline({
-      steps: [
-        {
-          label: "#{move[:emoji]} #{move[:label]}",
-          key: "step_#{i}",
-          depends_on: i == 0 ? [] : "step_#{i - 1}",
-          commands: [
-            move_data_set_command("reason#{i}", reason),
-            move_data_set_command("key#{i}", move[:value])
-          ]
-        }.tap { |step| 
-          # Always add artifact_paths for cross-platform support
-          # Pipeline steps might run on different agents than the main step
-          step[:artifact_paths] = ["reason#{i}__*.txt", "key#{i}__*.txt"]
-        }
-      ]
-    })
+    # In random mode, set the data immediately - no need for pipeline steps
+    set_move_data("reason#{i}", reason)
+    set_move_data("key#{i}", move[:value])
+    
+    puts "Random move #{i}: #{move[:emoji]} #{move[:label]} (#{move[:value]})"
   else 
     append_to_pipeline({
       steps: [
