@@ -96,12 +96,36 @@ def wait_for_key(i)
   end
 end
 
+def ensure_doom_container
+  return @container_id if @container_id
+  
+  # Build and start persistent container
+  system("docker build -t doom-game . > /dev/null 2>&1")
+  @container_id = `docker run -d -v $(pwd):/output doom-game sleep infinity`.strip
+  
+  # Start DOOM in the container
+  system("docker exec -d #{@container_id} bash -c 'export DISPLAY=:1 && Xvfb :1 -screen 0 320x240x24 &'")
+  sleep 1
+  system("docker exec -d #{@container_id} bash -c 'export DISPLAY=:1 && /usr/games/chocolate-doom -geometry 320x240 -iwad /usr/share/games/doom/DOOM1.WAD -episode 1 &'")
+  sleep 2
+  
+  at_exit { system("docker rm -f #{@container_id}") }
+  @container_id
+end
+
 def run_doom_step(step, key)
   puts "Running DOOM step #{step} with key: #{key || 'none'}"
   
-  # Build image if needed, then run container
-  system("docker build -t doom-game . > /dev/null 2>&1")
-  system("docker run --rm -v $(pwd):/output doom-game #{step} '#{key || ''}'")
+  container_id = ensure_doom_container
+  duration = step == 0 ? 2.5 : 1.25
+  
+  # Send key to same DOOM instance
+  if key
+    system("docker exec #{container_id} xdotool key #{key}")
+  end
+  
+  # Capture from same DOOM instance  
+  system("docker exec #{container_id} bash -c 'ffmpeg -y -t #{duration} -video_size 320x240 -framerate 15 -f x11grab -i :1 -loop -1 /output/#{step}.apng'")
   
   upload_clip(step)
 end
