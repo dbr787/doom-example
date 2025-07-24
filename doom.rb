@@ -36,12 +36,10 @@ def set_move_data(key, value)
   if use_mounted_agent?
     `buildkite-agent meta-data set "#{key}" "#{value}"`
   else
-    # Use artifacts as move data store - create file and upload as artifact
+    # Use artifacts as move data store - create file, post-command hook will upload
     filename = "#{key}__#{value}.txt"
     File.write(filename, "")  # Empty file, value encoded in filename
-    # Note: This would need buildkite-agent artifact upload, so this function 
-    # won't work cross-platform. Use move_data_set_command in pipeline steps instead.
-    puts "Warning: set_move_data not supported cross-platform, use move_data_set_command in pipeline steps"
+    puts "Created #{filename} - will be uploaded by post-command hook"
   end
 end
 
