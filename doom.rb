@@ -170,6 +170,13 @@ def wait_for_key(i)
 end
 
 def wait_for_mode
+  # Check environment variable first (set by pipeline)
+  if ENV['DOOM_MODE'] && !ENV['DOOM_MODE'].empty?
+    puts "Got mode from environment: #{ENV['DOOM_MODE']}"
+    return ENV['DOOM_MODE']
+  end
+  
+  # Fallback to polling metadata (for backwards compatibility)
   loop do
     puts "Getting metadata: mode"
     result = get_move_data("mode")
