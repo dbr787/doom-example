@@ -5,10 +5,10 @@ require "open3"
 
 # Define supported moves
 MOVES = [
-  {label: "Move", key: "Up", value: "Up", emoji: ":arrow_up:", description: "To move forward"},
-  {label: "Move", key: "Down", value: "Down", emoji: ":arrow_down:", description: "To move backward"},
-  {label: "Turn", key: "Left", value: "Left", emoji: ":arrow_left:", description: "To turn left"},
-  {label: "Turn", key: "Right", value: "Right", emoji: ":arrow_right:", description: "To turn right"},
+  {label: "Forward", key: "Up", value: "Up", emoji: ":arrow_up:", description: "To move forward"},
+  {label: "Back", key: "Down", value: "Down", emoji: ":arrow_down:", description: "To move backward"},
+  {label: "Left", key: "Left", value: "Left", emoji: ":arrow_left:", description: "To turn left"},
+  {label: "Right", key: "Right", value: "Right", emoji: ":arrow_right:", description: "To turn right"},
   {label: "Fire", key: "Ctrl", value: "Control_L", emoji: ":boom:", description: "To fire"},
   {label: "Open", key: "Space", value: "space", emoji: ":door:", description: "To open a door"}
 ]
@@ -145,26 +145,32 @@ end
 
 def upload_clip(i)
   if i == 0
-    reason = "Game on."
+    reason = "🎮 🟢"
   else
-    # Get the move and generate consistent reason text
+    # Get the move and generate emoji representation
     move_value = get_move_data("key#{i - 1}")
     mode = ENV['DOOM_MODE'] || 'manual'
     
-    # Find the move description
-    move = MOVES.find { |m| m[:value] == move_value } || MOVES.first
-    action = move[:description].downcase.gsub("to ", "")
-    
-    case mode
-    when 'manual'
-      reason = "User decided to #{action}"
-    when 'random'
-      reason = "Randomly decided to #{action}"
-    when 'ai'
-      reason = "AI decided to #{action}"
-    else
-      reason = "Decided to #{action}"
+    # Mode emoji
+    mode_emoji = case mode
+    when 'manual' then '👆'
+    when 'random' then '🎲'
+    when 'ai' then '🤖'
+    else '❓'
     end
+    
+    # Move emoji
+    move_emoji = case move_value
+    when 'Up' then '⬆️'
+    when 'Down' then '⬇️'
+    when 'Left' then '⬅️'
+    when 'Right' then '➡️'
+    when 'Control_L' then '💥'
+    when 'space' then '🚪'
+    else '❓'
+    end
+    
+    reason = "#{mode_emoji} #{move_emoji}"
   end
 
   # Rename APNG as PNG for upload  
@@ -175,7 +181,7 @@ def upload_clip(i)
   upload_artifact(file)
   
   # Reference artifact by filename only (matches upload path)
-  annotate(%(<div><img class="block" width="640" height="480" src="artifact://#{file}"><p>#{reason}</p></div>))
+  annotate(%(<div><img class="block" width="640" height="480" src="artifact://#{file}"><br><br><p>#{reason}</p></div>))
 end
 
 # Main game loop
