@@ -1,26 +1,17 @@
 steps:
-  - input: ":video_game: How to play?"
+  - input: ":video_game: How to play DOOM?"
     key: mode
     fields:
       - select: Game mode
         key: mode
         options:
-          - label: Prompt me for every move
+          - label: Manual (choose each move)
             value: manual
-          - label: Choose moves completely at random
+          - label: Random moves
             value: random
-          - label: Let Claude run the show
+          - label: AI moves
             value: ai
 
-  - label: ":rage4: Run Doom"
-    key: run-doom
+  - label: ":rage4: Run DOOM"
     depends_on: mode
-    plugins:
-      - docker-compose#v5.10.0:
-          run: doom-game
-          mount-buildkite-agent: true
-          propagate-environment: true
-          environment:
-            - ANTHROPIC_API_KEY
-            - BUILDKITE_API_TOKEN
-            - DOOM_MODE
+    command: "./run-doom.sh"

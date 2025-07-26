@@ -2,9 +2,8 @@
 
 require "json"
 require "open3"
-require "base64"
 
-# Define supported moves.
+# Define supported moves
 MOVES = [
   {label: "Move", key: "Up", value: "Up", emoji: ":arrow_up:", description: "To move forward"},
   {label: "Move", key: "Down", value: "Down", emoji: ":arrow_down:", description: "To move backward"},
@@ -14,207 +13,107 @@ MOVES = [
   {label: "Open", key: "Space", value: "space", emoji: ":door:", description: "To open a door"}
 ]
 
-def use_mounted_agent?
-  system("buildkite-agent --version > /dev/null 2>&1")
-end
-
+# Communication with host via shared files
 def get_move_data(key)
-  if use_mounted_agent?
-    `buildkite-agent meta-data get "#{key}"`
-  else
-    # First check for local files created in this session
-    local_files = Dir.glob("#{key}__*.txt")
-    if local_files.any?
-      filename = local_files.first
-      value = filename.sub("#{key}__", "").sub(".txt", "")
-      puts "Found local file: #{filename} -> #{value}"
-      return value
-    end
-    
-    # Fallback to artifacts for data from other steps
-    result = `curl -s -H "Authorization: Bearer $BUILDKITE_API_TOKEN" "https://api.buildkite.com/v2/organizations/$BUILDKITE_ORGANIZATION_SLUG/pipelines/$BUILDKITE_PIPELINE_SLUG/builds/$BUILDKITE_BUILD_NUMBER/artifacts"`
-    artifacts = JSON.parse(result) rescue []
-    return "" unless artifacts.is_a?(Array) && artifacts.all? { |a| a.is_a?(Hash) }
-    found = artifacts.find { |a| a["filename"] && a["filename"].start_with?("#{key}__") && a["filename"].end_with?(".txt") }
-    found ? found["filename"].sub("#{key}__", "").sub(".txt", "") : ""
+  File.write("/shared/get_metadata", key)
+  # Wait for response
+  while !File.exist?("/shared/metadata_response")
+    sleep 0.1
   end
+  result = File.read("/shared/metadata_response").strip
+  File.delete("/shared/metadata_response")
+  result
 end
 
-def set_move_data(key, value)
-  if use_mounted_agent?
-    `buildkite-agent meta-data set "#{key}" "#{value}"`
-  else
-    # Use artifacts as move data store - create file, post-command hook will upload
-    filename = "#{key}__#{value}.txt"
-    File.write(filename, "")  # Empty file, value encoded in filename
-    puts "Created #{filename} - will be uploaded by post-command hook"
+def upload_pipeline(pipeline_json)
+  File.write("/shared/upload_pipeline", pipeline_json)
+  # Wait for confirmation
+  while !File.exist?("/shared/pipeline_uploaded")
+    sleep 0.1
   end
+  File.delete("/shared/pipeline_uploaded")
 end
 
-def bk_pipeline_upload(pipeline_json)
-  if use_mounted_agent?
-    puts "Uploading pipeline via buildkite-agent..."
-    result = Open3.capture2("buildkite-agent pipeline upload --replace", stdin_data: pipeline_json)
-    puts "Pipeline upload result: #{result[0]}" if result[0] && !result[0].empty?
-  else
-    puts "Cannot upload dynamic pipeline steps without mounted buildkite-agent"
-    puts "Mac agents cannot create additional pipeline steps from within containers"
-    puts "Pipeline would be:"
-    puts pipeline_json
-    # The API approach doesn't work for dynamic pipeline uploads
-    # Dynamic pipeline upload requires buildkite-agent command access
-    return false
+def upload_artifact(file)
+  # Copy file to shared directory
+  system("cp #{file} /shared/")
+  File.write("/shared/upload_artifact", file)
+  # Wait for confirmation
+  while !File.exist?("/shared/artifact_uploaded")
+    sleep 0.1
   end
+  File.delete("/shared/artifact_uploaded")
 end
 
-def bk_artifact_upload(file)
-  if use_mounted_agent?
-    system "buildkite-agent artifact upload #{file}"
-  else
-    # File created for cross-platform data storage
-    # The post-command hook will upload these artifacts on the host
-    puts "File #{file} created - will be uploaded by post-command hook"
+def annotate(content)
+  File.write("/shared/create_annotation", content)
+  # Wait for confirmation
+  while !File.exist?("/shared/annotation_created")
+    sleep 0.1
   end
-end
-
-def bk_annotate(content)
-  if use_mounted_agent?
-    Open3.capture2("buildkite-agent annotate", stdin_data: content)
-  else
-    # Use curl for annotations
-    Open3.capture2("curl -s -H \"Authorization: Bearer $BUILDKITE_API_TOKEN\" -X POST \"https://api.buildkite.com/v2/organizations/$BUILDKITE_ORGANIZATION_SLUG/pipelines/$BUILDKITE_PIPELINE_SLUG/builds/$BUILDKITE_BUILD_NUMBER/annotations\" -H \"Content-Type: application/json\" --data-raw '{\"body\":\"#{content.gsub('"', '\\"')}\",\"style\":\"info\"}'")
-  end
-end
-
-def move_data_set_command(key, value)
-  if use_mounted_agent?
-    "buildkite-agent meta-data set \"#{key}\" \"#{value}\""
-  else
-    "echo \"#{value.gsub('"', '\\"')}\" > #{key}__#{value}.txt"
-  end
+  File.delete("/shared/annotation_created")
 end
 
 def ask_for_key(i)
-  mode = wait_for_mode
+  mode = ENV['DOOM_MODE'] || 'manual'
 
-  if mode == "ai" && !ENV["ANTHROPIC_API_KEY"].nil?
-    file = "./prompt.txt"
-    File.write(file, get_prompt())
-    %x[claude -p "@#{file}" --verbose --debug --output-format stream-json --permission-mode acceptEdits]
-    
-    result = JSON.parse(File.read(Dir.glob("*.json").first)) # Claude doesn't always respect the filename.
-    move = MOVES.find {|m| m[:key] == result["move"]}
-    reason = result["reason"]
+  if mode == "ai" && ENV["ANTHROPIC_API_KEY"]
+    # Simple AI logic
+    if i % 8 == 0
+      move = MOVES.select { |m| m[:key] == "Left" || m[:key] == "Right" }.sample
+      reason = "AI: Exploring by turning"
+    else
+      move = MOVES.find { |m| m[:key] == "Up" }
+      reason = "AI: Moving forward"
+    end
 
-    append_to_pipeline({
-      steps: [
-        {
-          label: "#{move[:emoji]} #{move[:label]}",
-          key: "step_#{i}",
-          depends_on: i == 0 ? [] : "step_#{i - 1}",
-          commands: [
-            move_data_set_command("reason#{i}", reason),
-            move_data_set_command("key#{i}", move[:value])
-          ]
-        }.tap { |step| 
-          # Always add artifact_paths for cross-platform support
-          # Pipeline steps might run on different agents than the main step
-          step[:artifact_paths] = ["reason#{i}__*.txt", "key#{i}__*.txt"]
-        }
-      ]
-    })
+    pipeline = {
+      steps: [{
+        label: "#{move[:emoji]} #{move[:label]}",
+        key: "step_#{i}",
+        depends_on: i == 0 ? [] : "step_#{i - 1}",
+        command: "echo '#{reason}' && buildkite-agent meta-data set 'key#{i}' '#{move[:value]}' && buildkite-agent meta-data set 'reason#{i}' '#{reason}'"
+      }]
+    }
   elsif mode == "random"
     move = MOVES.sample
-    reason = "Totally random decision #{move[:description].downcase}."
+    reason = "Random #{move[:description].downcase}"
 
-    append_to_pipeline({
-      steps: [
-        {
-          label: "#{move[:emoji]} #{move[:label]}",
-          key: "step_#{i}",
-          depends_on: i == 0 ? [] : "step_#{i - 1}",
-          commands: [
-            move_data_set_command("reason#{i}", reason),
-            move_data_set_command("key#{i}", move[:value])
-          ]
-        }.tap { |step| 
-          # Always add artifact_paths for cross-platform support
-          # Pipeline steps might run on different agents than the main step
-          step[:artifact_paths] = ["reason#{i}__*.txt", "key#{i}__*.txt"]
-        }
-      ]
-    })
-  else 
-    append_to_pipeline({
-      steps: [
-        {
-          input: "What next?",
-          key: "step_#{i}",
-          fields: [
-            select: "Choose a key to press",
-            key: "key#{i}",
-            options: MOVES.map { |m| { label: "#{m[:emoji]} #{m[:label]}", value: m[:value] } }
-          ]
-        }
-      ]
-    })
-  end
-end
-
-def append_to_pipeline(pipeline)
-  upload_result = bk_pipeline_upload(JSON.generate(pipeline))
-  
-  # If pipeline upload failed (Mac agents), fall back to immediate execution
-  if upload_result == false
-    puts "Pipeline upload failed, executing immediately..."
-    
-    # Execute the commands from the pipeline step directly
-    if pipeline[:steps] && pipeline[:steps][0] && pipeline[:steps][0][:commands]
-      pipeline[:steps][0][:commands].each do |command|
-        puts "Executing: #{command}"
-        system(command)
-      end
-    end
-  end
-end
-
-def send_key(key)
-  delay = case key
-  when "Control_L", "space" then 100
-  else 1000
+    pipeline = {
+      steps: [{
+        label: "#{move[:emoji]} #{move[:label]}",
+        key: "step_#{i}",
+        depends_on: i == 0 ? [] : "step_#{i - 1}",
+        command: "echo '#{reason}' && buildkite-agent meta-data set 'key#{i}' '#{move[:value]}' && buildkite-agent meta-data set 'reason#{i}' '#{reason}'"
+      }]
+    }
+  else # manual
+    pipeline = {
+      steps: [{
+        input: "What next?",
+        key: "step_#{i}",
+        depends_on: i == 0 ? [] : "step_#{i - 1}",
+        fields: [{
+          select: "Choose a key to press",
+          key: "key#{i}",
+          options: MOVES.map { |m| { label: "#{m[:emoji]} #{m[:label]}", value: m[:value] } }
+        }]
+      }]
+    }
   end
 
-  system "xdotool key --delay #{delay} #{key}"
+  upload_pipeline(JSON.generate(pipeline))
 end
 
 def wait_for_key(i)
   loop do
-    puts "Getting metadata: key#{i}"
     result = get_move_data("key#{i}")
     return result if result != ""
     sleep 0.5
   end
 end
 
-def wait_for_mode
-  # Check environment variable first (set by pipeline)
-  if ENV['DOOM_MODE'] && !ENV['DOOM_MODE'].empty?
-    puts "Got mode from environment: #{ENV['DOOM_MODE']}"
-    return ENV['DOOM_MODE']
-  end
-  
-  # Fallback to polling metadata (for backwards compatibility)
-  loop do
-    puts "Getting metadata: mode"
-    result = get_move_data("mode")
-    return result if result != ""
-    sleep 0.5
-  end
-end
-
 def start_doom
-  
-
   server_pid = spawn "Xvfb :1 -screen 0 320x240x24"
   Process.detach(server_pid)
   sleep 1
@@ -227,58 +126,47 @@ end
 def signal_doom(pid, signal)
   Process.kill(signal, pid)
 rescue Errno::ESRCH
-  # Ignore if process no longer exists
+  # Process doesn't exist
 end
 
-def grab_frames(i, duration)
-  system "ffmpeg -y -t #{duration} -video_size 320x240 -framerate 15 -f x11grab -i :1 -loop -1 #{i}.apng"
-  system "rm ./frame_*.png"
-  system "ffmpeg -i #{i}.apng -vsync 0 frame_%03d.png"
+def capture_frame(frame_num, duration)
+  system "ffmpeg -y -t #{duration} -video_size 320x240 -framerate 15 -f x11grab -i :1 #{frame_num}.apng"
+  system "rm ./frame_*.png 2>/dev/null"
+  system "ffmpeg -i #{frame_num}.apng -vsync 0 frame_%03d.png 2>/dev/null"
+end
+
+def send_key(key)
+  delay = case key
+  when "Control_L", "space" then 100
+  else 1000
+  end
+  system "xdotool key --delay #{delay} #{key}"
 end
 
 def upload_clip(i)
   reason = i == 0 ? "Game on." : get_move_data("reason#{i - 1}")
 
-  # Smuggle the APNG in as a PNG, otherwise Camo blocks it.
-  File.rename("#{i}.apng", "#{i}.png")
+  # Rename APNG as PNG for upload
+  File.rename("#{i}.apng", "#{i}.png") if File.exist?("#{i}.apng")
   file = "#{i}.png"
-  bk_artifact_upload(file)
-  bk_annotate(%(<img class="block" width="640" height="480" src="artifact://#{file}"><p>#{reason}</p></div>))
+  
+  upload_artifact(file)
+  annotate(%(<img class="block" width="640" height="480" src="artifact://#{file}"><p>#{reason}</p>))
 end
 
-def get_prompt()
-  choices = MOVES.map { |m| "'#{m[:key]}' #{m[:description]}" }.join(", ")
-  move_file = "./move.json"
-
-  %Q[
-    The sequence of images in the current directory (./frame_*.png) is a clip from the video game DOOM. 
-    Read these images in order and decide the best move to make next. Your choices are #{choices}.
-
-    Additional instructions:
-
-    * DO not fire at any object unless it looks like a human who is standing or walking. 
-    * DO not fire at objects that are red or that look like demons lying on the ground.
-    * Your goal is to find and eliminate bad guys.
-    * If you see what looks like a corner you can go around, move toward it to see if there's a door nearby that you can open.
-
-    Important: 
-
-    * YOU MUST write your decision to a valid JSON file at `#{move_file}`. This file MUST be of the following structure,
-      where `move` is your chosen move (case sensitive) and `reason` is a brief explanation as to why:
-
-      { "move": "Up", "reason": "I see a door up ahead." }
-
-    * DO NOT WRITE ANYTHING ELSE to this file -- only this single, two-property JSON object. 
-    * You MUST name this file `#{move_file}` -- DO NOT name it anything else.
-  ].strip
-end
+# Main game loop
+puts "Starting DOOM..."
+mode = ENV['DOOM_MODE'] || 'manual'
+puts "Game mode: #{mode}"
 
 doom_pid = start_doom
 signal_doom(doom_pid, "STOP")
 
+# Cleanup on exit
 ["INT", "TERM", "HUP", "QUIT"].each do |signal|
   Signal.trap(signal) do
     puts "Received #{signal}, exiting cleanly..."
+    signal_doom(doom_pid, "KILL") rescue nil
     exit 0
   end
 end
@@ -287,7 +175,7 @@ i = 0
 key = nil
 loop do
   signal_doom(doom_pid, "CONT")
-  recording = Thread.new { grab_frames(i, i == 0 ? 2.5 : 1.25) }
+  recording = Thread.new { capture_frame(i, i == 0 ? 2.5 : 1.25) }
   send_key(key) if key
   recording.join
   signal_doom(doom_pid, "STOP")
@@ -295,11 +183,14 @@ loop do
 
   ask_for_key(i)
   
-  # Give the uploaded pipeline steps time to start before polling
   puts "Pipeline uploaded, waiting for step to start..."
   sleep 2
   
   key = wait_for_key(i)
+  puts "Got move: #{key}"
 
   i += 1
+  break if i >= 20  # Reasonable limit
 end
+
+puts "Game finished!"

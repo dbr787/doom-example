@@ -1,7 +1,0 @@
-#!/bin/bash
-
-# Set DOOM_MODE from metadata if this is the Doom step
-if [[ "$BUILDKITE_STEP_KEY" == "run-doom" ]]; then
-  export DOOM_MODE=$(buildkite-agent meta-data get "mode")
-  echo "Set DOOM_MODE to: $DOOM_MODE"
-fi
