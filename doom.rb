@@ -13,6 +13,19 @@ MOVES = [
   {label: "Open", key: "Space", value: "space", emoji: ":door:", description: "To open a door"}
 ]
 
+# Helper to convert move value to emoji
+def move_to_emoji(move_value)
+  case move_value
+  when 'Up' then '⬆️'
+  when 'Down' then '⬇️'
+  when 'Left' then '⬅️'
+  when 'Right' then '➡️'
+  when 'Control_L' then '💥'
+  when 'space' then '🚪'
+  else '❓'
+  end
+end
+
 # Communication with host via shared files
 def get_move_data(key)
   File.write("/shared/get_metadata", key)
@@ -69,7 +82,7 @@ def ask_for_key(i)
 
     pipeline = {
       steps: [{
-        label: "#{move[:emoji]} #{move[:label]}",
+        label: "🤖 #{move_to_emoji(move[:value])}",
         key: "step_#{i}",
         depends_on: i == 0 ? [] : "step_#{i - 1}",
         command: "echo '#{reason}' && buildkite-agent meta-data set 'key#{i}' '#{move[:value]}'"
@@ -81,7 +94,7 @@ def ask_for_key(i)
 
     pipeline = {
       steps: [{
-        label: "#{move[:emoji]} #{move[:label]}",
+        label: "🎲 #{move_to_emoji(move[:value])}",
         key: "step_#{i}",
         depends_on: i == 0 ? [] : "step_#{i - 1}",
         command: "echo '#{reason}' && buildkite-agent meta-data set 'key#{i}' '#{move[:value]}'"
@@ -159,18 +172,7 @@ def upload_clip(i)
     else '❓'
     end
     
-    # Move emoji
-    move_emoji = case move_value
-    when 'Up' then '⬆️'
-    when 'Down' then '⬇️'
-    when 'Left' then '⬅️'
-    when 'Right' then '➡️'
-    when 'Control_L' then '💥'
-    when 'space' then '🚪'
-    else '❓'
-    end
-    
-    reason = "#{mode_emoji} #{move_emoji}"
+    reason = "#{mode_emoji} #{move_to_emoji(move_value)}"
   end
 
   # Rename APNG as PNG for upload  
