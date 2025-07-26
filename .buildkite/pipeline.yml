@@ -1,4 +1,8 @@
 steps:
+  - label: ":rage4: Run Doom"
+    key: run-doom
+    command: "./run-doom.sh"
+
   - input: ":video_game: How to play?"
     key: mode
     fields:
@@ -11,7 +15,3 @@ steps:
             value: random
           - label: 🤖 Let AI decide each move
             value: ai
-
-  - label: ":rage4: Run Doom"
-    key: run-doom
-    command: "./run-doom.sh"

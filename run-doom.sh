@@ -1,9 +1,8 @@
 #!/bin/bash
 set -euo pipefail
 
-# Get game mode from input step
-MODE=$(buildkite-agent meta-data get mode)
-echo "Game mode: $MODE"
+# Mode will be determined by polling inside the container
+echo "Starting game - mode will be determined via polling"
 
 # Create shared directory for communication
 SHARED_DIR=$(mktemp -d)
@@ -14,7 +13,6 @@ echo "Starting DOOM container..."
 # Run DOOM container with shared volume
 docker run --rm \
   -v "$SHARED_DIR:/shared" \
-  -e DOOM_MODE="$MODE" \
   -e ANTHROPIC_API_KEY \
   -e BUILDKITE_BUILD_NUMBER \
   -e BUILDKITE_ORGANIZATION_SLUG \
