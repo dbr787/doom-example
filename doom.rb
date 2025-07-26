@@ -84,7 +84,7 @@ def ask_for_key(i)
       steps: [{
         label: "🤖 #{move_to_emoji(move[:value])}",
         key: "step_#{i}",
-        depends_on: i == 0 ? "run-doom" : "step_#{i - 1}",
+        depends_on: i == 0 ? "mode" : "step_#{i - 1}",
         command: "echo '#{reason}' && buildkite-agent meta-data set 'key#{i}' '#{move[:value]}'"
       }]
     }
@@ -96,7 +96,7 @@ def ask_for_key(i)
       steps: [{
         label: "🎲 #{move_to_emoji(move[:value])}",
         key: "step_#{i}",
-        depends_on: i == 0 ? "run-doom" : "step_#{i - 1}",
+        depends_on: i == 0 ? "mode" : "step_#{i - 1}",
         command: "echo '#{reason}' && buildkite-agent meta-data set 'key#{i}' '#{move[:value]}'"
       }]
     }
@@ -105,7 +105,7 @@ def ask_for_key(i)
       steps: [{
         input: "💬 What next?", 
         key: "step_#{i}",
-        depends_on: i == 0 ? "run-doom" : "step_#{i - 1}",
+        depends_on: i == 0 ? "mode" : "step_#{i - 1}",
         fields: [{
           select: "Choose a key to press",
           key: "key#{i}",
