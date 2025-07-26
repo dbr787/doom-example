@@ -146,12 +146,14 @@ end
 def upload_clip(i)
   reason = i == 0 ? "Game on." : get_move_data("reason#{i - 1}")
 
-  # Rename APNG as PNG for upload
+  # Rename APNG as PNG for upload  
   File.rename("#{i}.apng", "#{i}.png") if File.exist?("#{i}.apng")
   file = "#{i}.png"
   
+  # Upload artifact (waits for completion via host communication)
   upload_artifact(file)
-  annotate(%(<img class="block" width="640" height="480" src="artifact://#{file}"><p>#{reason}</p>))
+  
+  annotate(%(<div><img class="block" width="640" height="480" src="artifact://#{file}"><p>#{reason}</p></div>))
 end
 
 # Main game loop
