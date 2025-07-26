@@ -82,15 +82,10 @@ def ask_for_key(i)
 
     pipeline = {
       steps: [{
-        group: "🎮 Gameplay",
-        key: "gameplay",
-        depends_on: "mode",
-        steps: [{
-          label: "🤖 #{move_to_emoji(move[:value])}",
-          key: "step_#{i}",
-          depends_on: i == 0 ? [] : "step_#{i - 1}",
-          command: "echo '#{reason}' && buildkite-agent meta-data set 'key#{i}' '#{move[:value]}'"
-        }]
+        label: "🤖 #{move_to_emoji(move[:value])}",
+        key: "step_#{i}",
+        depends_on: i == 0 ? "mode" : "step_#{i - 1}",
+        command: "echo '#{reason}' && buildkite-agent meta-data set 'key#{i}' '#{move[:value]}'"
       }]
     }
   elsif mode == "random"
@@ -99,32 +94,22 @@ def ask_for_key(i)
 
     pipeline = {
       steps: [{
-        group: "🎮 Gameplay",
-        key: "gameplay",
-        depends_on: "mode",
-        steps: [{
-          label: "🎲 #{move_to_emoji(move[:value])}",
-          key: "step_#{i}",
-          depends_on: i == 0 ? [] : "step_#{i - 1}",
-          command: "echo '#{reason}' && buildkite-agent meta-data set 'key#{i}' '#{move[:value]}'"
-        }]
+        label: "🎲 #{move_to_emoji(move[:value])}",
+        key: "step_#{i}",
+        depends_on: i == 0 ? "mode" : "step_#{i - 1}",
+        command: "echo '#{reason}' && buildkite-agent meta-data set 'key#{i}' '#{move[:value]}'"
       }]
     }
   else # manual
     pipeline = {
       steps: [{
-        group: "🎮 Gameplay",
-        key: "gameplay",
-        depends_on: "mode",
-        steps: [{
-          input: "💬 What next?", 
-          key: "step_#{i}",
-          depends_on: i == 0 ? [] : "step_#{i - 1}",
-          fields: [{
-            select: "Choose a key to press",
-            key: "key#{i}",
-            options: MOVES.map { |m| { label: "#{m[:emoji]} #{m[:label]}", value: m[:value] } }
-          }]
+        input: "💬 What next?", 
+        key: "step_#{i}",
+        depends_on: i == 0 ? "mode" : "step_#{i - 1}",
+        fields: [{
+          select: "Choose a key to press",
+          key: "key#{i}",
+          options: MOVES.map { |m| { label: "#{m[:emoji]} #{m[:label]}", value: m[:value] } }
         }]
       }]
     }
