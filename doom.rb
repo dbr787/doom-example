@@ -67,8 +67,7 @@ def annotate(content)
   File.delete("/shared/annotation_created")
 end
 
-def ask_for_key(i)
-  mode = ENV['DOOM_MODE'] || 'manual'
+def ask_for_key(i, mode)
 
   if mode == "ai" && ENV["ANTHROPIC_API_KEY"]
     # Simple AI logic
@@ -224,7 +223,7 @@ loop do
   signal_doom(doom_pid, "STOP")
   upload_clip(i)
 
-  ask_for_key(i)
+  ask_for_key(i, mode)
   
   puts "Pipeline uploaded, waiting for step to start..."
   sleep 2
