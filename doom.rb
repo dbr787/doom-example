@@ -90,7 +90,7 @@ def ask_for_key(i)
   else # manual
     pipeline = {
       steps: [{
-        input: "What next?",
+        input: "💬 What next?",
         key: "step_#{i}",
         depends_on: i == 0 ? [] : "step_#{i - 1}",
         fields: [{

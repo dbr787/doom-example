@@ -1,5 +1,5 @@
 steps:
-  - input: ":video_game: How to play DOOM?"
+  - input: ":video_game: How to play?"
     key: mode
     fields:
       - select: Game mode
@@ -12,6 +12,6 @@ steps:
           - label: AI moves
             value: ai
 
-  - label: ":rage4: Run DOOM"
+  - label: ":rage4: Run Doom"
     depends_on: mode
     command: "./run-doom.sh"
