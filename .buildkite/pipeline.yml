@@ -3,7 +3,7 @@ steps:
     key: mode
     fields:
       - select: Game mode
-        key: mode
+        key: game_mode
         options:
           - label: 👆 Let me decide each move
             value: manual
@@ -14,5 +14,4 @@ steps:
 
   - label: ":rage4: Run Doom"
     key: run-doom
-    depends_on: mode
     command: "./run-doom.sh"

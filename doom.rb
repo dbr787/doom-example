@@ -84,7 +84,7 @@ def ask_for_key(i)
       steps: [{
         label: "🤖 #{move_to_emoji(move[:value])}",
         key: "step_#{i}",
-        depends_on: i == 0 ? "mode" : "step_#{i - 1}",
+        depends_on: i == 0 ? "run-doom" : "step_#{i - 1}",
         command: "echo '#{reason}' && buildkite-agent meta-data set 'key#{i}' '#{move[:value]}'"
       }]
     }
@@ -96,7 +96,7 @@ def ask_for_key(i)
       steps: [{
         label: "🎲 #{move_to_emoji(move[:value])}",
         key: "step_#{i}",
-        depends_on: i == 0 ? "mode" : "step_#{i - 1}",
+        depends_on: i == 0 ? "run-doom" : "step_#{i - 1}",
         command: "echo '#{reason}' && buildkite-agent meta-data set 'key#{i}' '#{move[:value]}'"
       }]
     }
@@ -105,7 +105,7 @@ def ask_for_key(i)
       steps: [{
         input: "💬 What next?", 
         key: "step_#{i}",
-        depends_on: i == 0 ? "mode" : "step_#{i - 1}",
+        depends_on: i == 0 ? "run-doom" : "step_#{i - 1}",
         fields: [{
           select: "Choose a key to press",
           key: "key#{i}",
@@ -186,9 +186,20 @@ def upload_clip(i)
   annotate(%(<div class="center"><img class="block mx-auto" width="640" height="480" src="artifact://#{file}"><h2 class="mt2 center">#{reason}</h2></div>))
 end
 
+# Wait for mode selection via polling (same mechanism as moves)
+def wait_for_mode
+  puts "Waiting for mode selection..."
+  loop do
+    result = get_move_data("game_mode")
+    return result if result != ""
+    sleep 0.5
+  end
+end
+
 # Main game loop
 puts "Starting DOOM..."
-mode = ENV['DOOM_MODE'] || 'manual'
+puts "Waiting for mode selection..."
+mode = wait_for_mode
 puts "Game mode: #{mode}"
 
 doom_pid = start_doom
