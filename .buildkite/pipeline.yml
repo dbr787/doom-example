@@ -5,11 +5,11 @@ steps:
       - select: Game mode
         key: mode
         options:
-          - label: Manual (choose each move)
+          - label: 👆 Let me decide each move
             value: manual
-          - label: Random moves
+          - label: 🎲 Randomly decide each move
             value: random
-          - label: AI moves
+          - label: 🤖 Let AI decide each move
             value: ai
 
   - label: ":rage4: Run Doom"

@@ -72,7 +72,7 @@ def ask_for_key(i)
         label: "#{move[:emoji]} #{move[:label]}",
         key: "step_#{i}",
         depends_on: i == 0 ? [] : "step_#{i - 1}",
-        command: "echo '#{reason}' && buildkite-agent meta-data set 'key#{i}' '#{move[:value]}' && buildkite-agent meta-data set 'reason#{i}' '#{reason}'"
+        command: "echo '#{reason}' && buildkite-agent meta-data set 'key#{i}' '#{move[:value]}'"
       }]
     }
   elsif mode == "random"
@@ -84,7 +84,7 @@ def ask_for_key(i)
         label: "#{move[:emoji]} #{move[:label]}",
         key: "step_#{i}",
         depends_on: i == 0 ? [] : "step_#{i - 1}",
-        command: "echo '#{reason}' && buildkite-agent meta-data set 'key#{i}' '#{move[:value]}' && buildkite-agent meta-data set 'reason#{i}' '#{reason}'"
+        command: "echo '#{reason}' && buildkite-agent meta-data set 'key#{i}' '#{move[:value]}'"
       }]
     }
   else # manual
@@ -144,7 +144,28 @@ def send_key(key)
 end
 
 def upload_clip(i)
-  reason = i == 0 ? "Game on." : get_move_data("reason#{i - 1}")
+  if i == 0
+    reason = "Game on."
+  else
+    # Get the move and generate consistent reason text
+    move_value = get_move_data("key#{i - 1}")
+    mode = ENV['DOOM_MODE'] || 'manual'
+    
+    # Find the move description
+    move = MOVES.find { |m| m[:value] == move_value } || MOVES.first
+    action = move[:description].downcase.gsub("to ", "")
+    
+    case mode
+    when 'manual'
+      reason = "User decided to #{action}"
+    when 'random'
+      reason = "Randomly decided to #{action}"
+    when 'ai'
+      reason = "AI decided to #{action}"
+    else
+      reason = "Decided to #{action}"
+    end
+  end
 
   # Rename APNG as PNG for upload  
   File.rename("#{i}.apng", "#{i}.png") if File.exist?("#{i}.apng")
