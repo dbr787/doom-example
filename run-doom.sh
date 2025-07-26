@@ -16,6 +16,9 @@ docker run --rm \
   -v "$SHARED_DIR:/shared" \
   -e DOOM_MODE="$MODE" \
   -e ANTHROPIC_API_KEY \
+  -e BUILDKITE_BUILD_NUMBER \
+  -e BUILDKITE_ORGANIZATION_SLUG \
+  -e BUILDKITE_PIPELINE_SLUG \
   $(docker build -q .) &
 
 DOCKER_PID=$!
@@ -35,7 +38,8 @@ while kill -0 $DOCKER_PID 2>/dev/null; do
     file=$(cat "$SHARED_DIR/upload_artifact")
     if [[ -f "$SHARED_DIR/$file" ]]; then
       echo "Uploading artifact: $file"
-      buildkite-agent artifact upload "$SHARED_DIR/$file"
+      # Upload from shared directory but preserve filename
+      cd "$SHARED_DIR" && buildkite-agent artifact upload "$file" && cd -
     fi
     rm "$SHARED_DIR/upload_artifact"
     touch "$SHARED_DIR/artifact_uploaded"

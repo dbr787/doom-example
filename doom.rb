@@ -153,6 +153,7 @@ def upload_clip(i)
   # Upload artifact (waits for completion via host communication)
   upload_artifact(file)
   
+  # Reference artifact by filename only (matches upload path)
   annotate(%(<div><img class="block" width="640" height="480" src="artifact://#{file}"><p>#{reason}</p></div>))
 end
 
