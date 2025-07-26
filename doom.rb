@@ -181,7 +181,7 @@ def upload_clip(i)
   upload_artifact(file)
   
   # Reference artifact by filename only (matches upload path)
-  annotate(%(<div><img class="block" width="640" height="480" src="artifact://#{file}"><br><br><p>#{reason}</p></div>))
+  annotate(%(<div><img class="block" width="640" height="480" src="artifact://#{file}"><h2 class="mt2">#{reason}</h2></div>))
 end
 
 # Main game loop
