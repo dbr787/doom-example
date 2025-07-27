@@ -164,7 +164,7 @@ def upload_clip(i, mode)
     
     # Mode emoji
     mode_emoji = case mode
-    when 'manual' then '👆'
+    when 'manual' then '💬'
     when 'random' then '🎲'
     when 'ai' then '🤖'
     else '❓'
