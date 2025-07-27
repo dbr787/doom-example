@@ -14,4 +14,5 @@ steps:
 
   - label: ":rage4: Run Doom"
     key: run-doom
+    depends_on: mode
     command: "./run-doom.sh"
