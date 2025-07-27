@@ -242,12 +242,12 @@ def send_key(key)
   system "xdotool key --delay #{delay} #{key}"
 end
 
-def upload_clip(i, mode)
+def upload_clip(i, mode, move_value = nil)
   if i == 0
     reason = "🎮 🟢"
   else
-    # Get the move and generate emoji representation
-    move_value = get_move_data("move#{i - 1}")
+    # Use the provided move value (no need to re-fetch)
+    move_value = move_value || get_move_data("move#{i - 1}")
     
     # For AI and random modes, include the reasoning if available
     if mode == "ai" || mode == "random"
@@ -279,9 +279,17 @@ end
 # Generic wait function for any metadata key
 def wait_for_metadata(key, description = nil)
   puts "Waiting for #{description || key}..."
+  timeout = 600 # 10 minutes
+  attempts = 0
   loop do
     result = get_move_data(key)
     return result if result != ""
+    
+    attempts += 1
+    if attempts * 0.5 >= timeout
+      puts "Timeout waiting for #{key} after #{timeout} seconds"
+      exit 1
+    end
     sleep 0.5
   end
 end
@@ -322,7 +330,7 @@ loop do
   signal_doom(doom_pid, "STOP")
   
   # Upload screenshot and create next input step
-  upload_clip(i, mode)
+  upload_clip(i, mode, move)
   ask_for_key(i, mode)
   
   puts "Pipeline uploaded, waiting for step to start..."
