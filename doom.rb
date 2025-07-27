@@ -27,15 +27,48 @@ def move_to_emoji(move_value)
 end
 
 # Communication with host via shared files
-def get_move_data(key)
-  File.write("/shared/get_metadata", key)
-  # Wait for response
-  while !File.exist?("/shared/metadata_response")
-    sleep 0.1
+def get_move_data(key, max_retries = 3)
+  retries = 0
+  
+  while retries < max_retries
+    begin
+      # Add small delay between rapid requests to avoid race conditions
+      sleep 0.2 if retries > 0
+      
+      # Write request file with explicit flush
+      File.open("/shared/get_metadata", "w") do |f|
+        f.write(key)
+        f.flush
+        f.fsync  # Force write to disk
+      end
+      
+      # Wait for response with timeout
+      timeout = 30  # 30 second timeout
+      start_time = Time.now
+      
+      while !File.exist?("/shared/metadata_response")
+        if Time.now - start_time > timeout
+          raise "Timeout waiting for metadata response"
+        end
+        sleep 0.1
+      end
+      
+      # Read and delete response file
+      result = File.read("/shared/metadata_response").strip
+      File.delete("/shared/metadata_response")
+      return result
+      
+    rescue => e
+      retries += 1
+      puts "Metadata request failed (attempt #{retries}/#{max_retries}): #{e.message}"
+      
+      # Clean up any leftover files before retrying
+      File.delete("/shared/get_metadata") if File.exist?("/shared/get_metadata")
+      File.delete("/shared/metadata_response") if File.exist?("/shared/metadata_response")
+      
+      raise e if retries >= max_retries
+    end
   end
-  result = File.read("/shared/metadata_response").strip
-  File.delete("/shared/metadata_response")
-  result
 end
 
 def upload_pipeline(pipeline_json)
@@ -245,6 +278,8 @@ loop do
 
   # Check for game control actions (only in manual mode)
   if mode == "manual"
+    # Small delay between metadata requests to avoid race conditions
+    sleep 0.3
     begin
       action = get_move_data("action#{i}")
       puts "Got action: '#{action}'"

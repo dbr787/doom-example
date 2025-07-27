@@ -54,9 +54,24 @@ while kill -0 $DOCKER_PID 2>/dev/null; do
   # Metadata get requests
   if [[ -f "$SHARED_DIR/get_metadata" ]]; then
     key=$(cat "$SHARED_DIR/get_metadata")
-    value=$(buildkite-agent meta-data get "$key" 2>/dev/null || echo "")
-    echo "$value" > "$SHARED_DIR/metadata_response"
+    echo "Host: Getting metadata for key: $key"
+    
+    # Get metadata with retry logic
+    value=""
+    for attempt in {1..3}; do
+      if value=$(buildkite-agent meta-data get "$key" 2>/dev/null); then
+        break
+      else
+        echo "Host: Metadata get attempt $attempt failed for key: $key"
+        sleep 0.5
+      fi
+    done
+    
+    # Write response atomically
+    echo "$value" > "$SHARED_DIR/metadata_response.tmp"
+    mv "$SHARED_DIR/metadata_response.tmp" "$SHARED_DIR/metadata_response"
     rm "$SHARED_DIR/get_metadata"
+    echo "Host: Responded with value: '$value'"
   fi
   
   sleep 0.1
