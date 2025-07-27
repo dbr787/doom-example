@@ -115,10 +115,12 @@ def ask_for_key(i, mode)
             options: MOVES.map { |m| { label: "#{m[:emoji]} #{m[:label]}", value: m[:value] } }
           },
           {
-            select: "Game settings",
+            select: "Game options",
             key: "game_option#{i}",
-            required: false,
+            required: true,
+            default: "continue",
             options: [
+              { label: "💬 Continue with current mode", value: "continue" },
               { label: "🎲 Switch to random mode after this move", value: "switch_random" },
               { label: "🤖 Switch to AI mode after this move", value: "switch_ai" },
               { label: "🏁 End the game after this move", value: "end_game" }
