@@ -9,9 +9,15 @@ trap "rm -rf $SHARED_DIR" EXIT
 
 # Build and start the DOOM container
 echo "Building Docker image..."
-if docker build -t doom-game .; then
+# Use doom.rb file hash to bust cache only when it changes
+if command -v sha256sum >/dev/null; then
+  DOOM_HASH=$(sha256sum doom.rb | cut -d' ' -f1 | head -c8)
+else
+  DOOM_HASH=$(shasum -a 256 doom.rb | cut -d' ' -f1 | head -c8)
+fi
+if docker build --build-arg DOOM_HASH="$DOOM_HASH" -t doom-game .; then
   echo "✅ Built successfully"
-elif docker buildx build --load -t doom-game .; then
+elif docker buildx build --load --build-arg DOOM_HASH="$DOOM_HASH" -t doom-game .; then
   echo "✅ Built successfully"
 else
   echo "❌ Docker build failed"

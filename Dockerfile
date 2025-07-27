@@ -26,8 +26,9 @@ ENV DISPLAY=:1
 USER doom
 WORKDIR /home/doom
 
-# Copy game orchestration script
+# Copy game orchestration script (cache busted by file hash)
+ARG DOOM_HASH
 COPY --chown=doom:doom doom.rb .
-RUN chmod +x doom.rb
+RUN chmod +x doom.rb && echo "Built doom.rb hash: $DOOM_HASH"
 
 CMD ["./doom.rb"]
