@@ -176,7 +176,7 @@ def start_doom
   Process.detach(server_pid)
   sleep 1
 
-  doom_pid = spawn "/usr/games/chocolate-doom -geometry 320x240 -iwad /usr/share/games/doom/DOOM1.WAD -episode 1"
+  doom_pid = spawn "/usr/games/chocolate-doom -geometry 320x240 -iwad /usr/share/games/doom/DOOM1.WAD -episode 1 -nosound"
   Process.detach(doom_pid)
   doom_pid
 end
