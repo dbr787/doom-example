@@ -64,11 +64,15 @@ while kill -0 $DOCKER_PID 2>/dev/null; do
     
     # Retry getting metadata in case it's not available yet
     value=""
-    for attempt in {1..3}; do
-      if value=$(buildkite-agent meta-data get "$key" 2>/dev/null); then
+    for attempt in {1..10}; do
+      if value=$(buildkite-agent meta-data get "$key"); then
         break
       else
-        echo "Host: Metadata get attempt $attempt failed for key: $key"
+        echo "Host: Metadata get attempt $attempt of 10 failed for key: $key"
+        if [[ $attempt -eq 10 ]]; then
+          echo "Host: ERROR - Cannot continue game without user input"
+          exit 1
+        fi
         sleep 0.5
       fi
     done
