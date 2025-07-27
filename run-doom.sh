@@ -5,7 +5,24 @@ echo "Starting interactive DOOM game via Buildkite pipeline..."
 
 # Create temporary directory for host-container communication
 SHARED_DIR=$(mktemp -d)
-trap "rm -rf $SHARED_DIR" EXIT
+
+# Cleanup function for containers and temp files
+cleanup() {
+  echo "Cleaning up..."
+  if [[ -n "${DOCKER_PID:-}" ]] && kill -0 $DOCKER_PID 2>/dev/null; then
+    echo "Stopping Docker container (PID: $DOCKER_PID)"
+    kill $DOCKER_PID 2>/dev/null || true
+    wait $DOCKER_PID 2>/dev/null || true
+  fi
+  
+  # Force cleanup any remaining doom-game containers
+  docker ps -q --filter "ancestor=doom-game" | xargs -r docker kill 2>/dev/null || true
+  docker ps -aq --filter "ancestor=doom-game" | xargs -r docker rm 2>/dev/null || true
+  
+  rm -rf "$SHARED_DIR"
+}
+
+trap cleanup EXIT INT TERM
 
 # Build and start the DOOM container
 echo "Building Docker image..."
@@ -26,6 +43,7 @@ fi
 
 echo "Starting DOOM container..."
 docker run --rm \
+  --name "doom-game-$$" \
   -v "$SHARED_DIR:/shared" \
   -e ANTHROPIC_API_KEY \
   doom-game &
