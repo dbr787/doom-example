@@ -19,7 +19,7 @@ if docker build . 2>&1 | tee /tmp/build.log && IMAGE_ID=$(grep "^sha256:" /tmp/b
   else
     echo "❌ No layers were cached - fresh build"
   fi
-elif docker buildx build --builder default --load --progress=plain . 2>&1 | tee /tmp/build.log && IMAGE_ID=$(grep "sha256:" /tmp/build.log | tail -1); then
+elif docker buildx build --builder default --load --progress=plain . 2>&1 | tee /tmp/build.log && IMAGE_ID=$(grep "naming to" /tmp/build.log | sed 's/.*moby-dangling@//g' | sed 's/ done.*//g'); then
   echo "Built with buildx (default builder)"
   if grep -q "CACHED" /tmp/build.log; then
     echo "✅ Some layers were cached"
