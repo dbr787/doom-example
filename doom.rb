@@ -78,6 +78,8 @@ def annotate(content)
   File.delete("/shared/annotation_created")
 end
 
+
+
 def ask_for_key(i, mode)
 
   if mode == "ai" && ENV["ANTHROPIC_API_KEY"]
@@ -132,7 +134,7 @@ def ask_for_key(i, mode)
               { label: "💬 Continue with current mode", value: "continue" },
               { label: "🎲 Switch to random mode", value: "switch_random" },
               { label: "🤖 Switch to AI mode", value: "switch_ai" },
-              { label: ":rage4: Rage quit", value: "end_game" }
+              { label: "🏳️ Rage quit", value: "end_game" }
             ]
           }
         ]
