@@ -12,10 +12,10 @@ echo "Starting DOOM container..."
 
 # Build and run DOOM container with shared volume
 # Try buildx with --load first (for hosted agents), fallback to regular build
-if IMAGE_ID=$(docker buildx build --load -q . 2>/dev/null); then
-  echo "Built with buildx --load"
+if IMAGE_ID=$(docker buildx build --load -q . 2>/dev/null) && docker image inspect "$IMAGE_ID" >/dev/null 2>&1; then
+  echo "Built with buildx --load: $IMAGE_ID"
 else
-  echo "Buildx --load failed, trying regular docker build"
+  echo "Buildx --load failed or image not available, trying regular docker build"
   IMAGE_ID=$(docker build -q .)
 fi
 
