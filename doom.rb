@@ -109,6 +109,7 @@ def ask_for_key(i, mode)
           {
             select: "Select your next move",
             key: "key#{i}",
+            default: "Up",
             options: MOVES.map { |m| { label: "#{m[:emoji]} #{m[:label]}", value: m[:value] } }
           },
           {
@@ -244,23 +245,27 @@ loop do
 
   # Check for game control actions (only in manual mode)
   if mode == "manual"
-    action = get_move_data("action#{i}")
-    puts "Got action: '#{action}'"
-    
-    # Handle empty action (when optional field wasn't selected)
-    if action.nil? || action.empty?
-      puts "No action selected, continuing with current mode"
-    elsif action == "switch_random"
-      mode = "random"
-      puts "Switched to random mode"
-    elsif action == "switch_ai"
-      mode = "ai"
-      puts "Switched to AI mode"
-    elsif action == "end_game"
-      puts "Game ended by user"
-      break
-    else
-      puts "Continuing with current mode"
+    begin
+      action = get_move_data("action#{i}")
+      puts "Got action: '#{action}'"
+      
+      # Handle empty action (when optional field wasn't selected)
+      if action.nil? || action.empty?
+        puts "No action selected, continuing with current mode"
+      elsif action == "switch_random"
+        mode = "random"
+        puts "Switched to random mode"
+      elsif action == "switch_ai"
+        mode = "ai"
+        puts "Switched to AI mode"
+      elsif action == "end_game"
+        puts "Game ended by user"
+        break
+      else
+        puts "Continuing with current mode"
+      end
+    rescue => e
+      puts "Could not get action metadata (#{e.message}), continuing with current mode"
     end
   end
 
