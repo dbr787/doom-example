@@ -12,15 +12,15 @@ echo "Starting DOOM container..."
 
 # Build Docker image with fallback for different environments
 echo "Building Docker image..."
-if docker build -t doom-game . 2>&1 | tee /tmp/build.log; then
-  echo "Built with regular docker build"
-  if grep -q "Using cache" /tmp/build.log; then
+if docker buildx build --builder default --load -t doom-game . 2>&1 | tee /tmp/build.log; then
+  echo "Built with buildx (default builder)"
+  if grep -q "CACHED" /tmp/build.log; then
     echo "✅ Some layers were cached"
   else
     echo "❌ No layers were cached - fresh build"
   fi
-elif docker buildx build --builder default --load -t doom-game . 2>&1 | tee /tmp/build.log; then
-  echo "Built with buildx (default builder)"
+elif docker build -t doom-game . 2>&1 | tee /tmp/build.log; then
+  echo "Built with regular docker build"
   if grep -q "CACHED" /tmp/build.log; then
     echo "✅ Some layers were cached"
   else
