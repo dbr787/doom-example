@@ -40,4 +40,4 @@ steps:
     key: run-doom
     depends_on: mode
     command: "./run-doom.sh"
-    timeout_in_minutes: 30
+    timeout_in_minutes: 60

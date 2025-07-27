@@ -279,7 +279,14 @@ loop do
   end
 
   i += 1
-  # Continue until timeout (30 minutes) or user ends game
+  
+  # Auto-end game after 100 moves for reasonable session length
+  if i >= 100
+    puts "Game ended automatically after 100 moves"
+    break
+  end
+  
+  # Continue until timeout, move limit, or user ends game
 end
 
 puts "Game finished!"

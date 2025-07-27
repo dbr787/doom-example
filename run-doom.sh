@@ -66,7 +66,7 @@ while kill -0 $DOCKER_PID 2>/dev/null; do
   # Handle metadata requests from container (user input from Buildkite UI)
   if [[ -f "$SHARED_DIR/get_metadata" ]]; then
     key=$(cat "$SHARED_DIR/get_metadata")
-    echo "Getting metadata for key: $key"
+    echo "Polling for metadata key: $key"
     
     # Try to get metadata (single attempt since container will retry)
     value=$(buildkite-agent meta-data get "$key" 2>/dev/null) || value=""
