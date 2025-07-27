@@ -1,9 +1,9 @@
 #!/usr/bin/env ruby
 #
-# Interactive DOOM game runner for Buildkite pipelines
+# Interactive Doom game runner for Buildkite pipelines
 # 
 # This script runs inside a Docker container and orchestrates:
-# - Starting the DOOM game process
+# - Starting the Doom game process
 # - Capturing screenshots of gameplay
 # - Creating dynamic Buildkite pipeline steps for user input
 # - Communicating with the host script via shared files
@@ -12,7 +12,7 @@
 require "json"
 require "open3"
 
-# DOOM game controls - maps UI labels to actual key inputs
+# Doom game controls - maps UI labels to actual key inputs
 MOVES = [
   {label: "Forward", key: "Up", value: "Up", emoji: ":arrow_up:", description: "To move forward"},
   {label: "Back", key: "Down", value: "Down", emoji: ":arrow_down:", description: "To move backward"},
@@ -150,7 +150,7 @@ def start_doom(level)
   Process.detach(server_pid)
   sleep 1
 
-  doom_pid = spawn "/usr/games/chocolate-doom -geometry 320x240 -iwad /usr/share/games/doom/DOOM1.WAD -warp 1 #{level} -nosound"
+  doom_pid = spawn "/usr/games/chocolate-doom -geometry 320x240 -iwad /usr/share/games/doom/Doom1.WAD -warp 1 #{level} -nosound"
   Process.detach(doom_pid)
   doom_pid
 end
@@ -216,7 +216,7 @@ end
 
 # === MAIN GAME EXECUTION ===
 
-puts "Starting DOOM..."
+puts "Starting Doom..."
 
 # Get initial game settings from Buildkite pipeline input
 mode = wait_for_metadata("game_mode", "mode selection")
@@ -225,7 +225,7 @@ puts "Game mode: #{mode}"
 level = wait_for_metadata("level", "level selection") 
 puts "Level: E1M#{level}"
 
-# Start DOOM process and pause it initially
+# Start Doom process and pause it initially
 doom_pid = start_doom(level)
 signal_doom(doom_pid, "STOP")
 
