@@ -105,11 +105,23 @@ def ask_for_key(i, mode)
         input: "💬 What next?", 
         key: "step_#{i}",
         depends_on: i == 0 ? "mode" : "step_#{i - 1}",
-        fields: [{
-          select: "Choose a key to press",
-          key: "key#{i}",
-          options: MOVES.map { |m| { label: "#{m[:emoji]} #{m[:label]}", value: m[:value] } }
-        }]
+        fields: [
+          {
+            select: "Select your next move",
+            key: "key#{i}",
+            options: MOVES.map { |m| { label: "#{m[:emoji]} #{m[:label]}", value: m[:value] } }
+          },
+          {
+            select: "Game settings",
+            key: "action#{i}",
+            required: false,
+            options: [
+              { label: "🎲 Switch to random mode after this move", value: "switch_random" },
+              { label: "🤖 Switch to AI mode after this move", value: "switch_ai" },
+              { label: "🏁 End the game after this move", value: "end_game" }
+            ]
+          }
+        ]
       }]
     }
   end
@@ -229,6 +241,21 @@ loop do
   
   key = wait_for_key(i)
   puts "Got move: #{key}"
+
+  # Check for game control actions (only in manual mode)
+  if mode == "manual"
+    action = get_move_data("action#{i}")
+    if action == "switch_random"
+      mode = "random"
+      puts "Switched to random mode"
+    elsif action == "switch_ai"
+      mode = "ai"
+      puts "Switched to AI mode"
+    elsif action == "end_game"
+      puts "Game ended by user"
+      break
+    end
+  end
 
   i += 1
   break if i >= 20  # Reasonable limit
