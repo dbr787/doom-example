@@ -260,7 +260,7 @@ loop do
   end
 
   i += 1
-  break if i >= 20  # Reasonable limit
+  # Continue until timeout (30 minutes) or user ends game
 end
 
 puts "Game finished!"

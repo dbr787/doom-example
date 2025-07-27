@@ -12,14 +12,14 @@ echo "Starting DOOM container..."
 
 # Build Docker image with fallback for different environments
 echo "Building Docker image..."
-if IMAGE_ID=$(docker build . 2>&1 | tee /tmp/build.log | tail -1); then
+if docker build . 2>&1 | tee /tmp/build.log && IMAGE_ID=$(grep "^sha256:" /tmp/build.log | tail -1); then
   echo "Built with regular docker build"
   if grep -q "Using cache" /tmp/build.log; then
     echo "✅ Some layers were cached"
   else
     echo "❌ No layers were cached - fresh build"
   fi
-elif IMAGE_ID=$(docker buildx build --builder default --load --progress=plain . 2>&1 | tee /tmp/build.log | tail -1); then
+elif docker buildx build --builder default --load --progress=plain . 2>&1 | tee /tmp/build.log && IMAGE_ID=$(grep "sha256:" /tmp/build.log | tail -1); then
   echo "Built with buildx (default builder)"
   if grep -q "CACHED" /tmp/build.log; then
     echo "✅ Some layers were cached"
