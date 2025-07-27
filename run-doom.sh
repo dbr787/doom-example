@@ -15,7 +15,7 @@ if command -v sha256sum >/dev/null; then
 else
   DOOM_HASH=$(shasum -a 256 doom.rb | cut -d' ' -f1 | head -c8)
 fi
-if docker build --build-arg DOOM_HASH="$DOOM_HASH" -t doom-game .; then
+if docker build --build-arg DOOM_HASH="$DOOM_HASH" --output type=docker -t doom-game .; then
   echo "✅ Built successfully (docker)"
 elif docker buildx build --output type=docker --build-arg DOOM_HASH="$DOOM_HASH" -t doom-game .; then
   echo "✅ Built successfully (buildx)"
