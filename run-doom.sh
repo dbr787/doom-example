@@ -28,7 +28,6 @@ echo "Starting DOOM container..."
 docker run --rm \
   -v "$SHARED_DIR:/shared" \
   -e ANTHROPIC_API_KEY \
-  --user "$(id -u):$(id -g)" \
   doom-game &
 
 DOCKER_PID=$!
