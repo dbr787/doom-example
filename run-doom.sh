@@ -10,33 +10,29 @@ trap "rm -rf $SHARED_DIR" EXIT
 
 echo "Starting DOOM container..."
 
-# Build and run DOOM container with shared volume
-# For hosted agents, we need to force loading into local daemon
+# Build Docker image with fallback for different environments
 echo "Building Docker image..."
-if command -v docker buildx >/dev/null 2>&1; then
-  # Try buildx with --load first
-  if IMAGE_ID=$(docker buildx build --load -q . 2>/dev/null) && docker image inspect "$IMAGE_ID" >/dev/null 2>&1; then
-    echo "Built with buildx --load: $IMAGE_ID"
-  else
-    echo "Buildx --load failed, trying buildx with default builder"
-    # Force use of default builder which should load locally
-    IMAGE_ID=$(docker buildx build --builder default --load -q .)
-  fi
+if IMAGE_ID=$(docker buildx build --builder default --load -q . 2>/dev/null); then
+  echo "Built with buildx (default builder)"
+elif IMAGE_ID=$(docker build -q . 2>/dev/null); then
+  echo "Built with regular docker build"
 else
-  echo "Using regular docker build"
-  IMAGE_ID=$(docker build -q .)
+  echo "Docker build failed with both methods"
+  exit 1
 fi
 
+echo "Image ID: $IMAGE_ID"
+
+# Run container with shared volume and host user permissions
+echo "Starting DOOM container..."
 docker run --rm \
   -v "$SHARED_DIR:/shared" \
   -e ANTHROPIC_API_KEY \
-  -e BUILDKITE_BUILD_NUMBER \
-  -e BUILDKITE_ORGANIZATION_SLUG \
-  -e BUILDKITE_PIPELINE_SLUG \
   --user "$(id -u):$(id -g)" \
   "$IMAGE_ID" &
 
 DOCKER_PID=$!
+echo "Container started with PID: $DOCKER_PID"
 
 # Handle container requests
 while kill -0 $DOCKER_PID 2>/dev/null; do

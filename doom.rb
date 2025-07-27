@@ -27,48 +27,17 @@ def move_to_emoji(move_value)
 end
 
 # Communication with host via shared files
-def get_move_data(key, max_retries = 3)
-  retries = 0
-  
-  while retries < max_retries
-    begin
-      # Add small delay between rapid requests to avoid race conditions
-      sleep 0.2 if retries > 0
-      
-      # Write request file with explicit flush
-      File.open("/shared/get_metadata", "w") do |f|
-        f.write(key)
-        f.flush
-        f.fsync  # Force write to disk
-      end
-      
-      # Wait for response with timeout
-      timeout = 30  # 30 second timeout
-      start_time = Time.now
-      
-      while !File.exist?("/shared/metadata_response")
-        if Time.now - start_time > timeout
-          raise "Timeout waiting for metadata response"
-        end
-        sleep 0.1
-      end
-      
-      # Read and delete response file
-      result = File.read("/shared/metadata_response").strip
-      File.delete("/shared/metadata_response")
-      return result
-      
-    rescue => e
-      retries += 1
-      puts "Metadata request failed (attempt #{retries}/#{max_retries}): #{e.message}"
-      
-      # Clean up any leftover files before retrying
-      File.delete("/shared/get_metadata") if File.exist?("/shared/get_metadata")
-      File.delete("/shared/metadata_response") if File.exist?("/shared/metadata_response")
-      
-      raise e if retries >= max_retries
-    end
+def get_move_data(key)
+  # Write request file
+  File.write("/shared/get_metadata", key)
+  # Wait for response
+  while !File.exist?("/shared/metadata_response")
+    sleep 0.1
   end
+  # Read and clean up response file
+  result = File.read("/shared/metadata_response").strip
+  File.delete("/shared/metadata_response")
+  result
 end
 
 def upload_pipeline(pipeline_json)
@@ -163,13 +132,7 @@ def ask_for_key(i, mode)
   upload_pipeline(JSON.generate(pipeline))
 end
 
-def wait_for_move(i)
-  loop do
-    result = get_move_data("move#{i}")
-    return result if result != ""
-    sleep 0.5
-  end
-end
+# Remove this function - use wait_for_metadata instead
 
 def start_doom(level)
   server_pid = spawn "Xvfb :1 -screen 0 320x240x24"
@@ -230,21 +193,11 @@ def upload_clip(i, mode)
   annotate(%(<div class="center"><img class="block mx-auto" width="640" height="480" src="artifact://#{file}"><h2 class="mt2 center">#{reason}</h2></div>))
 end
 
-# Wait for mode selection via polling (same mechanism as moves)
-def wait_for_mode
-  puts "Waiting for mode selection..."
+# Generic wait function for any metadata key
+def wait_for_metadata(key, description = nil)
+  puts "Waiting for #{description || key}..."
   loop do
-    result = get_move_data("game_mode")
-    return result if result != ""
-    sleep 0.5
-  end
-end
-
-# Wait for level selection via polling
-def wait_for_level
-  puts "Waiting for level selection..."
-  loop do
-    result = get_move_data("level")
+    result = get_move_data(key)
     return result if result != ""
     sleep 0.5
   end
@@ -252,11 +205,10 @@ end
 
 # Main game loop
 puts "Starting DOOM..."
-puts "Waiting for mode selection..."
-mode = wait_for_mode
+mode = wait_for_metadata("game_mode", "mode selection")
 puts "Game mode: #{mode}"
 
-level = wait_for_level
+level = wait_for_metadata("level", "level selection")
 puts "Level: E1M#{level}"
 
 doom_pid = start_doom(level)
@@ -286,34 +238,24 @@ loop do
   puts "Pipeline uploaded, waiting for step to start..."
   sleep 2
   
-  move = wait_for_move(i)
+  move = wait_for_metadata("move#{i}", "move #{i}")
   puts "Got move: #{move}"
 
   # Check for game control actions (only in manual mode)
   if mode == "manual"
-    # Small delay between metadata requests to avoid race conditions
-    sleep 0.3
-    begin
-      game_option = get_move_data("game_option#{i}")
-      puts "Got game_option: '#{game_option}'"
-      
-      # Handle empty game_option (when optional field wasn't selected)
-      if game_option.nil? || game_option.empty?
-        puts "No game option selected, continuing with current mode"
-      elsif game_option == "switch_random"
-        mode = "random"
-        puts "Switched to random mode"
-      elsif game_option == "switch_ai"
-        mode = "ai"
-        puts "Switched to AI mode"
-      elsif game_option == "end_game"
-        puts "Game ended by user"
-        break
-      else
-        puts "Continuing with current mode"
-      end
-    rescue => e
-      puts "Could not get action metadata (#{e.message}), continuing with current mode"
+    game_option = get_move_data("game_option#{i}")
+    puts "Got game_option: '#{game_option}'"
+    
+    case game_option
+    when "switch_random"
+      mode = "random"
+      puts "Switched to random mode"
+    when "switch_ai"
+      mode = "ai"
+      puts "Switched to AI mode"
+    when "end_game"
+      puts "Game ended by user"
+      break
     end
   end
 
