@@ -10,14 +10,22 @@ trap "rm -rf $SHARED_DIR" EXIT
 
 echo "Starting DOOM container..."
 
-# Run DOOM container with shared volume
+# Build and run DOOM container with shared volume
+# Try buildx with --load first (for hosted agents), fallback to regular build
+if IMAGE_ID=$(docker buildx build --load -q . 2>/dev/null); then
+  echo "Built with buildx --load"
+else
+  echo "Buildx --load failed, trying regular docker build"
+  IMAGE_ID=$(docker build -q .)
+fi
+
 docker run --rm \
   -v "$SHARED_DIR:/shared" \
   -e ANTHROPIC_API_KEY \
   -e BUILDKITE_BUILD_NUMBER \
   -e BUILDKITE_ORGANIZATION_SLUG \
   -e BUILDKITE_PIPELINE_SLUG \
-  $(docker build -q .) &
+  "$IMAGE_ID" &
 
 DOCKER_PID=$!
 
