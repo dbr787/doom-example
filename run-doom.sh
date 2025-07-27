@@ -15,8 +15,8 @@ echo "Building Docker image..."
 if docker buildx build --builder default --load -t doom-game . 2>&1 | tee /tmp/build.log; then
   echo "Built with buildx (default builder)"
   # Count actual build steps vs cached steps
-  total_steps=$(grep -c "^\#[0-9]" /tmp/build.log || echo 0)
-  cached_steps=$(grep -c "CACHED" /tmp/build.log || echo 0)
+  total_steps=$(grep -c "^\#[0-9][0-9]* \[.*\]" /tmp/build.log)
+  cached_steps=$(grep -c "CACHED" /tmp/build.log)
   if [ "$cached_steps" -gt 0 ] || [ "$total_steps" -lt 8 ]; then
     echo "✅ Build used layer cache (steps: $total_steps, cached: $cached_steps)"
   else
