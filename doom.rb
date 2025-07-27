@@ -114,9 +114,8 @@ def ask_for_key(i, mode)
           {
             select: "Game settings",
             key: "action#{i}",
-            default: "continue",
+            required: false,
             options: [
-              { label: "✅ Continue with current mode", value: "continue" },
               { label: "🎲 Switch to random mode after this move", value: "switch_random" },
               { label: "🤖 Switch to AI mode after this move", value: "switch_ai" },
               { label: "🏁 End the game after this move", value: "end_game" }
@@ -256,6 +255,8 @@ loop do
     elsif action == "end_game"
       puts "Game ended by user"
       break
+    else
+      puts "Continuing with current mode"
     end
   end
 
