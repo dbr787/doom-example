@@ -9,9 +9,9 @@ trap "rm -rf $SHARED_DIR" EXIT
 
 # Build and start the DOOM container
 echo "Building Docker image..."
-if docker buildx build --load -t doom-game . >/dev/null 2>&1; then
+if docker build -t doom-game .; then
   echo "✅ Built successfully"
-elif docker build -t doom-game . >/dev/null 2>&1; then
+elif docker buildx build --load -t doom-game .; then
   echo "✅ Built successfully"
 else
   echo "❌ Docker build failed"
