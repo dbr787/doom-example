@@ -117,7 +117,7 @@ def ask_for_key(i, mode)
           {
             select: "Game options",
             key: "game_option#{i}",
-            required: true,
+            required: false,
             default: "continue",
             options: [
               { label: "💬 Continue with current mode", value: "continue" },
