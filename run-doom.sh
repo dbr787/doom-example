@@ -11,11 +11,19 @@ trap "rm -rf $SHARED_DIR" EXIT
 echo "Starting DOOM container..."
 
 # Build and run DOOM container with shared volume
-# Try buildx with --load first (for hosted agents), fallback to regular build
-if IMAGE_ID=$(docker buildx build --load -q . 2>/dev/null) && docker image inspect "$IMAGE_ID" >/dev/null 2>&1; then
-  echo "Built with buildx --load: $IMAGE_ID"
+# For hosted agents, we need to force loading into local daemon
+echo "Building Docker image..."
+if command -v docker buildx >/dev/null 2>&1; then
+  # Try buildx with --load first
+  if IMAGE_ID=$(docker buildx build --load -q . 2>/dev/null) && docker image inspect "$IMAGE_ID" >/dev/null 2>&1; then
+    echo "Built with buildx --load: $IMAGE_ID"
+  else
+    echo "Buildx --load failed, trying buildx with default builder"
+    # Force use of default builder which should load locally
+    IMAGE_ID=$(docker buildx build --builder default --load -q .)
+  fi
 else
-  echo "Buildx --load failed or image not available, trying regular docker build"
+  echo "Using regular docker build"
   IMAGE_ID=$(docker build -q .)
 fi
 
