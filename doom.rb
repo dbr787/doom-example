@@ -155,13 +155,12 @@ def send_key(key)
   system "xdotool key --delay #{delay} #{key}"
 end
 
-def upload_clip(i)
+def upload_clip(i, mode)
   if i == 0
     reason = "🎮 🟢"
   else
     # Get the move and generate emoji representation
     move_value = get_move_data("key#{i - 1}")
-    mode = ENV['DOOM_MODE'] || 'manual'
     
     # Mode emoji
     mode_emoji = case mode
@@ -221,7 +220,7 @@ loop do
   send_key(key) if key
   recording.join
   signal_doom(doom_pid, "STOP")
-  upload_clip(i)
+  upload_clip(i, mode)
 
   ask_for_key(i, mode)
   
