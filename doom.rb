@@ -37,16 +37,29 @@ end
 
 # Functions for communicating with the host script via shared files
 def get_move_data(key)
-  # Write request file
-  File.write("/shared/get_metadata", key)
-  # Wait for response
-  while !File.exist?("/shared/metadata_response")
-    sleep 0.1
+  retries = 3
+  begin
+    # Write request file
+    File.write("/shared/get_metadata", key)
+    # Wait for response
+    while !File.exist?("/shared/metadata_response")
+      sleep 0.1
+    end
+    # Read and clean up response file
+    result = File.read("/shared/metadata_response").strip
+    File.delete("/shared/metadata_response")
+    result
+  rescue Errno::ENOENT => e
+    retries -= 1
+    if retries > 0
+      puts "Warning: Shared directory issue (#{e.message}), retrying..."
+      sleep 0.5
+      retry
+    else
+      puts "Error: Shared directory unavailable after retries. Exiting."
+      exit 1
+    end
   end
-  # Read and clean up response file
-  result = File.read("/shared/metadata_response").strip
-  File.delete("/shared/metadata_response")
-  result
 end
 
 def upload_pipeline(pipeline_json)
