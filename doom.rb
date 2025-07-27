@@ -117,7 +117,7 @@ def ask_for_key(i, mode)
         label: "🤖 #{move_to_emoji(move[:value])}",
         key: "step_#{i}",
         depends_on: i == 0 ? "mode" : "step_#{i - 1}",
-        command: "echo '#{reason}' && buildkite-agent meta-data set 'key#{i}' '#{move[:value]}'"
+        command: "echo '#{reason}' && buildkite-agent meta-data set 'move#{i}' '#{move[:value]}'"
       }]
     }
   elsif mode == "random"
@@ -129,7 +129,7 @@ def ask_for_key(i, mode)
         label: "🎲 #{move_to_emoji(move[:value])}",
         key: "step_#{i}",
         depends_on: i == 0 ? "mode" : "step_#{i - 1}",
-        command: "echo '#{reason}' && buildkite-agent meta-data set 'key#{i}' '#{move[:value]}'"
+        command: "echo '#{reason}' && buildkite-agent meta-data set 'move#{i}' '#{move[:value]}'"
       }]
     }
   else # manual
@@ -141,13 +141,13 @@ def ask_for_key(i, mode)
         fields: [
           {
             select: "Select your next move",
-            key: "key#{i}",
+            key: "move#{i}",
             default: "Up",
             options: MOVES.map { |m| { label: "#{m[:emoji]} #{m[:label]}", value: m[:value] } }
           },
           {
             select: "Game settings",
-            key: "action#{i}",
+            key: "game_option#{i}",
             required: false,
             options: [
               { label: "🎲 Switch to random mode after this move", value: "switch_random" },
@@ -163,9 +163,9 @@ def ask_for_key(i, mode)
   upload_pipeline(JSON.generate(pipeline))
 end
 
-def wait_for_key(i)
+def wait_for_move(i)
   loop do
-    result = get_move_data("key#{i}")
+    result = get_move_data("move#{i}")
     return result if result != ""
     sleep 0.5
   end
@@ -188,9 +188,9 @@ rescue Errno::ESRCH
 end
 
 def capture_frame(frame_num, duration)
-  system "ffmpeg -y -t #{duration} -video_size 320x240 -framerate 15 -f x11grab -i :1 #{frame_num}.apng"
+  system "ffmpeg -y -t #{duration} -video_size 320x240 -framerate 15 -f x11grab -i :1 #{frame_num}.apng -loglevel warning"
   system "rm ./frame_*.png 2>/dev/null"
-  system "ffmpeg -i #{frame_num}.apng -vsync 0 frame_%03d.png 2>/dev/null"
+  system "ffmpeg -i #{frame_num}.apng -vsync 0 frame_%03d.png -loglevel warning 2>/dev/null"
 end
 
 def send_key(key)
@@ -206,7 +206,7 @@ def upload_clip(i, mode)
     reason = "🎮 🟢"
   else
     # Get the move and generate emoji representation
-    move_value = get_move_data("key#{i - 1}")
+    move_value = get_move_data("move#{i - 1}")
     
     # Mode emoji
     mode_emoji = case mode
@@ -259,11 +259,11 @@ signal_doom(doom_pid, "STOP")
 end
 
 i = 0
-key = nil
+move = nil
 loop do
   signal_doom(doom_pid, "CONT")
   recording = Thread.new { capture_frame(i, i == 0 ? 2.5 : 1.25) }
-  send_key(key) if key
+  send_key(move) if move
   recording.join
   signal_doom(doom_pid, "STOP")
   upload_clip(i, mode)
@@ -273,27 +273,27 @@ loop do
   puts "Pipeline uploaded, waiting for step to start..."
   sleep 2
   
-  key = wait_for_key(i)
-  puts "Got move: #{key}"
+  move = wait_for_move(i)
+  puts "Got move: #{move}"
 
   # Check for game control actions (only in manual mode)
   if mode == "manual"
     # Small delay between metadata requests to avoid race conditions
     sleep 0.3
     begin
-      action = get_move_data("action#{i}")
-      puts "Got action: '#{action}'"
+      game_option = get_move_data("game_option#{i}")
+      puts "Got game_option: '#{game_option}'"
       
-      # Handle empty action (when optional field wasn't selected)
-      if action.nil? || action.empty?
-        puts "No action selected, continuing with current mode"
-      elsif action == "switch_random"
+      # Handle empty game_option (when optional field wasn't selected)
+      if game_option.nil? || game_option.empty?
+        puts "No game option selected, continuing with current mode"
+      elsif game_option == "switch_random"
         mode = "random"
         puts "Switched to random mode"
-      elsif action == "switch_ai"
+      elsif game_option == "switch_ai"
         mode = "ai"
         puts "Switched to AI mode"
-      elsif action == "end_game"
+      elsif game_option == "end_game"
         puts "Game ended by user"
         break
       else
