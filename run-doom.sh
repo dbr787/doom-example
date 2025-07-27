@@ -12,14 +12,14 @@ echo "Starting DOOM container..."
 
 # Build Docker image with fallback for different environments
 echo "Building Docker image..."
-if docker build . 2>&1 | tee /tmp/build.log && IMAGE_ID=$(grep "^sha256:" /tmp/build.log | tail -1); then
+if docker build -t doom-game . 2>&1 | tee /tmp/build.log; then
   echo "Built with regular docker build"
   if grep -q "Using cache" /tmp/build.log; then
     echo "✅ Some layers were cached"
   else
     echo "❌ No layers were cached - fresh build"
   fi
-elif docker buildx build --builder default --load --progress=plain . 2>&1 | tee /tmp/build.log && IMAGE_ID=$(grep "naming to" /tmp/build.log | sed 's/.*moby-dangling@//g' | sed 's/ done.*//g'); then
+elif docker buildx build --builder default --load -t doom-game . 2>&1 | tee /tmp/build.log; then
   echo "Built with buildx (default builder)"
   if grep -q "CACHED" /tmp/build.log; then
     echo "✅ Some layers were cached"
@@ -31,15 +31,13 @@ else
   exit 1
 fi
 
-echo "Image ID: $IMAGE_ID"
-
 # Run container with shared volume and host user permissions
 echo "Starting DOOM container..."
 docker run --rm \
   -v "$SHARED_DIR:/shared" \
   -e ANTHROPIC_API_KEY \
   --user "$(id -u):$(id -g)" \
-  "$IMAGE_ID" &
+  doom-game &
 
 DOCKER_PID=$!
 echo "Container started with PID: $DOCKER_PID"
