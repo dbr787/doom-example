@@ -30,12 +30,12 @@ echo "Build cache info:"
 docker system df --format 'table {{.Type}}\t{{.Total}}\t{{.Size}}\t{{.Reclaimable}}' 2>/dev/null || echo "N/A"
 echo "============================"
 
-# Build Docker image using default Docker configuration
-echo "Building Docker image..."
-if docker build -t doom-game . >/dev/null 2>&1; then
-  echo "✅ Built successfully"
-elif docker buildx build --load -t doom-game . >/dev/null 2>&1; then
-  echo "✅ Built with buildx fallback" 
+# Build Docker image using Buildkite's optimized remote builder
+echo "Building Docker image (using remote cache)..."
+if docker buildx build --load -t doom-game . >/dev/null 2>&1; then
+  echo "✅ Built with remote builder cache"
+elif docker build -t doom-game . >/dev/null 2>&1; then
+  echo "✅ Built with local fallback"
 else
   echo "❌ Docker build failed"
   exit 1
