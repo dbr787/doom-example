@@ -1,9 +1,18 @@
 #!/usr/bin/env ruby
+#
+# Interactive DOOM game runner for Buildkite pipelines
+# 
+# This script runs inside a Docker container and orchestrates:
+# - Starting the DOOM game process
+# - Capturing screenshots of gameplay
+# - Creating dynamic Buildkite pipeline steps for user input
+# - Communicating with the host script via shared files
+#
 
 require "json"
 require "open3"
 
-# Define supported moves
+# DOOM game controls - maps UI labels to actual key inputs
 MOVES = [
   {label: "Forward", key: "Up", value: "Up", emoji: ":arrow_up:", description: "To move forward"},
   {label: "Back", key: "Down", value: "Down", emoji: ":arrow_down:", description: "To move backward"},
@@ -13,7 +22,7 @@ MOVES = [
   {label: "Open", key: "Space", value: "space", emoji: ":door:", description: "To open a door"}
 ]
 
-# Helper to convert move value to emoji
+# Convert move values to emoji for display in Buildkite annotations
 def move_to_emoji(move_value)
   case move_value
   when 'Up' then '⬆️'
@@ -26,7 +35,7 @@ def move_to_emoji(move_value)
   end
 end
 
-# Communication with host via shared files
+# Functions for communicating with the host script via shared files
 def get_move_data(key)
   # Write request file
   File.write("/shared/get_metadata", key)
@@ -205,18 +214,22 @@ def wait_for_metadata(key, description = nil)
   end
 end
 
-# Main game loop
+# === MAIN GAME EXECUTION ===
+
 puts "Starting DOOM..."
+
+# Get initial game settings from Buildkite pipeline input
 mode = wait_for_metadata("game_mode", "mode selection")
 puts "Game mode: #{mode}"
 
-level = wait_for_metadata("level", "level selection")
+level = wait_for_metadata("level", "level selection") 
 puts "Level: E1M#{level}"
 
+# Start DOOM process and pause it initially
 doom_pid = start_doom(level)
 signal_doom(doom_pid, "STOP")
 
-# Cleanup on exit
+# Set up graceful shutdown
 ["INT", "TERM", "HUP", "QUIT"].each do |signal|
   Signal.trap(signal) do
     puts "Received #{signal}, exiting cleanly..."
@@ -225,25 +238,29 @@ signal_doom(doom_pid, "STOP")
   end
 end
 
+# Main game loop - capture frames, get user input, execute moves
 i = 0
 move = nil
 loop do
+  # Resume game, capture frame, execute move, pause game
   signal_doom(doom_pid, "CONT")
   recording = Thread.new { capture_frame(i, i == 0 ? 2.5 : 1.25) }
   send_key(move) if move
   recording.join
   signal_doom(doom_pid, "STOP")
+  
+  # Upload screenshot and create next input step
   upload_clip(i, mode)
-
   ask_for_key(i, mode)
   
   puts "Pipeline uploaded, waiting for step to start..."
   sleep 2
   
+  # Wait for user's next move
   move = wait_for_metadata("move#{i}", "move #{i}")
   puts "Got move: #{move}"
 
-  # Check for game control actions (only in manual mode)
+  # Handle mode switches and game end (manual mode only)
   if mode == "manual"
     game_option = get_move_data("game_option#{i}")
     puts "Got game_option: '#{game_option}'"
