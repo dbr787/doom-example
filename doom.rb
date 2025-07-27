@@ -109,7 +109,7 @@ def get_ai_move(i)
       # Find the move in our MOVES array
       move = MOVES.find { |m| m[:key] == move_key }
       if move
-        return [move, "AI: #{reason}"]
+        return [move, "🤖 #{move_to_emoji(move[:value])} AI: #{reason}"]
       end
     end
     
@@ -121,37 +121,18 @@ def get_ai_move(i)
       
       move = MOVES.find { |m| m[:key] == move_key }
       if move
-        return [move, "AI: #{reason}"]
+        return [move, "🤖 #{move_to_emoji(move[:value])} AI: #{reason}"]
       end
     end
     
   rescue => e
     puts "AI error: #{e.message}"
+    puts "Claude AI failed. Exiting."
+    exit 1
   end
   
-  # Fallback to smart logic if Claude fails
-  case i % 12
-  when 0, 1, 2, 3, 4  # Move forward most of the time
-    move = MOVES.find { |m| m[:key] == "Up" }
-    reason = "AI: Exploring forward"
-  when 5, 6  # Turn left occasionally
-    move = MOVES.find { |m| m[:key] == "Left" }
-    reason = "AI: Looking left for paths"
-  when 7, 8  # Turn right occasionally  
-    move = MOVES.find { |m| m[:key] == "Right" }
-    reason = "AI: Scanning right for enemies"
-  when 9  # Try to open doors
-    move = MOVES.find { |m| m[:key] == "Space" }
-    reason = "AI: Attempting to open door"
-  when 10  # Fire occasionally
-    move = MOVES.find { |m| m[:key] == "Ctrl" }
-    reason = "AI: Firing at potential threats"
-  when 11  # Back up occasionally
-    move = MOVES.find { |m| m[:key] == "Down" }
-    reason = "AI: Tactical retreat"
-  end
-  
-  [move, reason]
+  puts "Claude AI failed to return valid move. Exiting."
+  exit 1
 end
 
 def create_ai_prompt(i)
@@ -186,7 +167,7 @@ def ask_for_key(i, mode)
     }
   elsif mode == "random"
     move = MOVES.sample
-    reason = "Random #{move[:description].downcase}"
+    reason = "🎲 #{move_to_emoji(move[:value])} Random #{move[:description].downcase}"
 
     pipeline = {
       steps: [{
@@ -351,9 +332,13 @@ loop do
   move = wait_for_metadata("move#{i}", "move #{i}")
   puts "Got move: #{move}"
 
+  # Increment immediately after getting move to prevent infinite loops
+  current_move_index = i
+  i += 1
+
   # Handle mode switches and game end (manual mode only)
   if mode == "manual"
-    game_option = get_move_data("game_option#{i}")
+    game_option = get_move_data("game_option#{current_move_index}")
     puts "Got game_option: '#{game_option}'"
     
     case game_option
@@ -368,8 +353,6 @@ loop do
       break
     end
   end
-
-  i += 1
   
   # Auto-end game after 100 moves for reasonable session length
   if i >= 100
