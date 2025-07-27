@@ -114,7 +114,6 @@ def ask_for_key(i, mode)
           {
             select: "Game settings",
             key: "action#{i}",
-            required: false,
             default: "continue",
             options: [
               { label: "✅ Continue with current mode", value: "continue" },
@@ -247,6 +246,7 @@ loop do
   # Check for game control actions (only in manual mode)
   if mode == "manual"
     action = get_move_data("action#{i}")
+    puts "Got action: #{action}"
     if action == "switch_random"
       mode = "random"
       puts "Switched to random mode"
