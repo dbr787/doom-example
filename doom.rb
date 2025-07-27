@@ -78,26 +78,97 @@ def annotate(content)
   File.delete("/shared/annotation_created")
 end
 
+def get_ai_move(i)
+  begin
+    # Simple approach: pass image and prompt directly to Claude
+    prompt = create_ai_prompt(i)
+    
+    # Call Claude with image, let it decide and output to stdout
+    response = `claude "#{prompt}" #{i}.png 2>/dev/null`.strip
+    
+    # Try to extract JSON from response (Claude might wrap it in text)
+    json_match = response.match(/\{[^}]*"move"\s*:\s*"([^"]+)"[^}]*"reason"\s*:\s*"([^"]+)"[^}]*\}/)
+    
+    if json_match
+      move_key = json_match[1]
+      reason = json_match[2]
+      
+      # Find the move in our MOVES array
+      move = MOVES.find { |m| m[:key] == move_key }
+      if move
+        return [move, "AI: #{reason}"]
+      end
+    end
+    
+    # Try parsing as direct JSON if regex didn't work
+    if response.include?('"move"')
+      parsed = JSON.parse(response)
+      move_key = parsed["move"]
+      reason = parsed["reason"] || "AI decision"
+      
+      move = MOVES.find { |m| m[:key] == move_key }
+      if move
+        return [move, "AI: #{reason}"]
+      end
+    end
+    
+  rescue => e
+    puts "AI error: #{e.message}"
+  end
+  
+  # Fallback to smart logic if Claude fails
+  case i % 12
+  when 0, 1, 2, 3, 4  # Move forward most of the time
+    move = MOVES.find { |m| m[:key] == "Up" }
+    reason = "AI: Exploring forward"
+  when 5, 6  # Turn left occasionally
+    move = MOVES.find { |m| m[:key] == "Left" }
+    reason = "AI: Looking left for paths"
+  when 7, 8  # Turn right occasionally  
+    move = MOVES.find { |m| m[:key] == "Right" }
+    reason = "AI: Scanning right for enemies"
+  when 9  # Try to open doors
+    move = MOVES.find { |m| m[:key] == "Space" }
+    reason = "AI: Attempting to open door"
+  when 10  # Fire occasionally
+    move = MOVES.find { |m| m[:key] == "Ctrl" }
+    reason = "AI: Firing at potential threats"
+  when 11  # Back up occasionally
+    move = MOVES.find { |m| m[:key] == "Down" }
+    reason = "AI: Tactical retreat"
+  end
+  
+  [move, reason]
+end
 
+def create_ai_prompt(i)
+  moves_list = MOVES.map { |m| "#{m[:key]}: #{m[:description]}" }.join(", ")
+  
+  <<~PROMPT
+    You're playing Doom. Look at this game screenshot and decide the next move.
+    
+    Available moves: #{moves_list}
+    
+    Strategy: Move forward to explore, turn to navigate, fire at enemies, use space for doors.
+    
+    Respond with JSON only: {"move": "Up", "reason": "exploring forward"}
+    
+    Move must be one of: #{MOVES.map { |m| m[:key] }.join(", ")}
+  PROMPT
+end
 
 def ask_for_key(i, mode)
 
   if mode == "ai" && ENV["ANTHROPIC_API_KEY"]
-    # Simple AI logic
-    if i % 8 == 0
-      move = MOVES.select { |m| m[:key] == "Left" || m[:key] == "Right" }.sample
-      reason = "AI: Exploring by turning"
-    else
-      move = MOVES.find { |m| m[:key] == "Up" }
-      reason = "AI: Moving forward"
-    end
+    # Claude AI integration with smart fallback
+    move, reason = get_ai_move(i)
 
     pipeline = {
       steps: [{
         label: "🤖 #{move_to_emoji(move[:value])}",
         key: "step_#{i}",
         depends_on: i == 0 ? "mode" : "step_#{i - 1}",
-        command: "echo '#{reason}' && buildkite-agent meta-data set 'move#{i}' '#{move[:value]}'"
+        command: "echo '#{reason}' && buildkite-agent meta-data set 'move#{i}' '#{move[:value]}' && buildkite-agent meta-data set 'reason#{i}' '#{reason}'"
       }]
     }
   elsif mode == "random"
@@ -109,7 +180,7 @@ def ask_for_key(i, mode)
         label: "🎲 #{move_to_emoji(move[:value])}",
         key: "step_#{i}",
         depends_on: i == 0 ? "mode" : "step_#{i - 1}",
-        command: "echo '#{reason}' && buildkite-agent meta-data set 'move#{i}' '#{move[:value]}'"
+        command: "echo '#{reason}' && buildkite-agent meta-data set 'move#{i}' '#{move[:value]}' && buildkite-agent meta-data set 'reason#{i}' '#{reason}'"
       }]
     }
   else # manual
@@ -184,15 +255,20 @@ def upload_clip(i, mode)
     # Get the move and generate emoji representation
     move_value = get_move_data("move#{i - 1}")
     
-    # Mode emoji
-    mode_emoji = case mode
-    when 'manual' then '💬'
-    when 'random' then '🎲'
-    when 'ai' then '🤖'
-    else '❓'
+    # For AI and random modes, include the reasoning if available
+    if mode == "ai" || mode == "random"
+      stored_reason = get_move_data("reason#{i - 1}")
+      if stored_reason && !stored_reason.empty?
+        reason = stored_reason
+      else
+        # Fallback to emoji if no reason stored
+        mode_emoji = mode == 'ai' ? '🤖' : '🎲'
+        reason = "#{mode_emoji} #{move_to_emoji(move_value)}"
+      end
+    else
+      # Manual mode just shows emoji
+      reason = "💬 #{move_to_emoji(move_value)}"
     end
-    
-    reason = "#{mode_emoji} #{move_to_emoji(move_value)}"
   end
 
   # Rename APNG as PNG for upload  

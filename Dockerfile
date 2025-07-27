@@ -12,7 +12,12 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     chocolate-doom \
     curl \
     unzip \
+    nodejs \
+    npm \
     && rm -rf /var/lib/apt/lists/*
+
+# Install Claude Code CLI for AI integration
+RUN npm install -g @anthropic-ai/claude-code
 
 # Download DOOM shareware WAD file (free to use)
 RUN mkdir -p /usr/share/games/doom \
