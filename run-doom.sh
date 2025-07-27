@@ -62,16 +62,8 @@ while kill -0 $DOCKER_PID 2>/dev/null; do
     key=$(cat "$SHARED_DIR/get_metadata")
     echo "Host: Getting metadata for key: $key"
     
-    # Retry getting metadata in case it's not available yet
-    value=""
-    for attempt in {1..3}; do
-      if value=$(buildkite-agent meta-data get "$key" 2>/dev/null); then
-        break
-      else
-        echo "Host: Metadata get attempt $attempt failed for key: $key"
-        sleep 0.5
-      fi
-    done
+    # Try to get metadata (single attempt since container will retry)
+    value=$(buildkite-agent meta-data get "$key" 2>/dev/null) || value=""
     
     # Send response back to container
     echo "$value" > "$SHARED_DIR/metadata_response.tmp"
