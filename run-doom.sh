@@ -33,6 +33,7 @@ docker run --rm \
   -e BUILDKITE_BUILD_NUMBER \
   -e BUILDKITE_ORGANIZATION_SLUG \
   -e BUILDKITE_PIPELINE_SLUG \
+  --user "$(id -u):$(id -g)" \
   "$IMAGE_ID" &
 
 DOCKER_PID=$!
