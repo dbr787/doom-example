@@ -115,7 +115,9 @@ def ask_for_key(i, mode)
             select: "Game settings",
             key: "action#{i}",
             required: false,
+            default: "continue",
             options: [
+              { label: "✅ Continue with current mode", value: "continue" },
               { label: "🎲 Switch to random mode after this move", value: "switch_random" },
               { label: "🤖 Switch to AI mode after this move", value: "switch_ai" },
               { label: "🏁 End the game after this move", value: "end_game" }
