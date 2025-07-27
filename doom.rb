@@ -100,16 +100,6 @@ def ask_for_key(i, mode)
       }]
     }
   else # manual
-    # Add mode switching options after first move
-    options = MOVES.map { |m| { label: "#{m[:emoji]} #{m[:label]}", value: m[:value] } }
-    
-    if i > 0
-      options += [
-        { label: "🎲 Randomly decide each move from here", value: "switch_to_random" },
-        { label: "🤖 Let AI decide each move from here", value: "switch_to_ai" }
-      ]
-    end
-    
     pipeline = {
       steps: [{
         input: "💬 What next?", 
@@ -118,7 +108,7 @@ def ask_for_key(i, mode)
         fields: [{
           select: "Choose a key to press",
           key: "key#{i}",
-          options: options
+          options: MOVES.map { |m| { label: "#{m[:emoji]} #{m[:label]}", value: m[:value] } }
         }]
       }]
     }
@@ -240,19 +230,6 @@ loop do
   
   key = wait_for_key(i)
   puts "Got move: #{key}"
-
-  # Handle mode switching
-  if key == "switch_to_random"
-    mode = "random"
-    puts "Switched to random mode"
-    # Don't increment i, just continue with the new mode
-    next
-  elsif key == "switch_to_ai"
-    mode = "ai"
-    puts "Switched to AI mode"
-    # Don't increment i, just continue with the new mode
-    next
-  end
 
   i += 1
   break if i >= 20  # Reasonable limit
