@@ -130,9 +130,9 @@ def ask_for_key(i, mode)
             default: "continue",
             options: [
               { label: "💬 Continue with current mode", value: "continue" },
-              { label: "🎲 Switch to random mode after this move", value: "switch_random" },
-              { label: "🤖 Switch to AI mode after this move", value: "switch_ai" },
-              { label: "🏁 Finish the game", value: "end_game" }
+              { label: "🎲 Switch to random mode", value: "switch_random" },
+              { label: "🤖 Switch to AI mode", value: "switch_ai" },
+              { label: ":rage4: Rage quit", value: "end_game" }
             ]
           }
         ]
