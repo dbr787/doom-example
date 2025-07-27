@@ -28,13 +28,14 @@ RUN mkdir -p /usr/share/games/doom \
 # Create non-root user for security
 RUN useradd --create-home doom
 ENV DISPLAY=:1
-USER doom
-WORKDIR /home/doom
 
 # Copy game orchestration script (cache busted by file hash)
 ARG DOOM_HASH
 RUN echo "Cache bust: $DOOM_HASH"
-COPY doom.rb .
-RUN chmod 755 doom.rb && chown doom:doom doom.rb
+COPY doom.rb /home/doom/doom.rb
+RUN chmod 755 /home/doom/doom.rb && chown doom:doom /home/doom/doom.rb
+
+USER doom
+WORKDIR /home/doom
 
 CMD ["./doom.rb"]
