@@ -11,6 +11,18 @@ steps:
             value: random
           - label: 🤖 Let AI decide each move
             value: ai
+      - select: Episode
+        key: episode
+        default: "1"
+        options:
+          - label: 🔴 Episode 1: Knee-Deep in the Dead
+            value: "1"
+          - label: 🟠 Episode 2: The Shores of Hell
+            value: "2"
+          - label: 🔥 Episode 3: Inferno
+            value: "3"
+          - label: 🌙 Episode 4: Thy Flesh Consumed
+            value: "4"
 
   - label: ":rage4: Run Doom"
     key: run-doom

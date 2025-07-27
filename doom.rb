@@ -171,12 +171,12 @@ def wait_for_move(i)
   end
 end
 
-def start_doom
+def start_doom(episode)
   server_pid = spawn "Xvfb :1 -screen 0 320x240x24"
   Process.detach(server_pid)
   sleep 1
 
-  doom_pid = spawn "/usr/games/chocolate-doom -geometry 320x240 -iwad /usr/share/games/doom/DOOM1.WAD -episode 1 -nosound"
+  doom_pid = spawn "/usr/games/chocolate-doom -geometry 320x240 -iwad /usr/share/games/doom/DOOM1.WAD -episode #{episode} -nosound"
   Process.detach(doom_pid)
   doom_pid
 end
@@ -240,13 +240,26 @@ def wait_for_mode
   end
 end
 
+# Wait for episode selection via polling
+def wait_for_episode
+  puts "Waiting for episode selection..."
+  loop do
+    result = get_move_data("episode")
+    return result if result != ""
+    sleep 0.5
+  end
+end
+
 # Main game loop
 puts "Starting DOOM..."
 puts "Waiting for mode selection..."
 mode = wait_for_mode
 puts "Game mode: #{mode}"
 
-doom_pid = start_doom
+episode = wait_for_episode
+puts "Episode: #{episode}"
+
+doom_pid = start_doom(episode)
 signal_doom(doom_pid, "STOP")
 
 # Cleanup on exit
