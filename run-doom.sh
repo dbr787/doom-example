@@ -10,6 +10,20 @@ trap "rm -rf $SHARED_DIR" EXIT
 
 echo "Starting DOOM container..."
 
+# Log Docker configuration for debugging
+echo "=== Docker Configuration ==="
+echo "Docker version:"
+docker version --format '{{.Server.Version}}' 2>/dev/null || echo "N/A"
+echo "Buildx version:"
+docker buildx version 2>/dev/null || echo "N/A"
+echo "Current builder:"
+docker buildx inspect 2>/dev/null | head -5 || echo "N/A"
+echo "Available builders:"
+docker buildx ls 2>/dev/null || echo "N/A"
+echo "Docker info (storage driver, etc):"
+docker info --format '{{.Driver}} {{.CgroupDriver}}' 2>/dev/null || echo "N/A"
+echo "============================"
+
 # Build Docker image using default Docker configuration
 echo "Building Docker image..."
 if docker build -t doom-game . >/dev/null 2>&1; then
