@@ -245,8 +245,12 @@ loop do
   # Check for game control actions (only in manual mode)
   if mode == "manual"
     action = get_move_data("action#{i}")
-    puts "Got action: #{action}"
-    if action == "switch_random"
+    puts "Got action: '#{action}'"
+    
+    # Handle empty action (when optional field wasn't selected)
+    if action.nil? || action.empty?
+      puts "No action selected, continuing with current mode"
+    elsif action == "switch_random"
       mode = "random"
       puts "Switched to random mode"
     elsif action == "switch_ai"
