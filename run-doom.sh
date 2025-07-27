@@ -60,7 +60,7 @@ while kill -0 $DOCKER_PID 2>/dev/null; do
   # Handle metadata requests from container (user input from Buildkite UI)
   if [[ -f "$SHARED_DIR/get_metadata" ]]; then
     key=$(cat "$SHARED_DIR/get_metadata")
-    echo "Host: Getting metadata for key: $key"
+    echo "Getting metadata for key: $key"
     
     # Try to get metadata (single attempt since container will retry)
     value=$(buildkite-agent meta-data get "$key" 2>/dev/null) || value=""
@@ -69,10 +69,10 @@ while kill -0 $DOCKER_PID 2>/dev/null; do
     echo "$value" > "$SHARED_DIR/metadata_response.tmp"
     mv "$SHARED_DIR/metadata_response.tmp" "$SHARED_DIR/metadata_response"
     rm "$SHARED_DIR/get_metadata"
-    echo "Host: Responded with value: '$value'"
+    echo "Responded with value: '$value'"
   fi
   
-  sleep 0.1
+  sleep 0.2
 done
 
 wait $DOCKER_PID
