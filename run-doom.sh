@@ -16,12 +16,18 @@ echo "Docker version:"
 docker version --format '{{.Server.Version}}' 2>/dev/null || echo "N/A"
 echo "Buildx version:"
 docker buildx version 2>/dev/null || echo "N/A"
-echo "Current builder:"
-docker buildx inspect 2>/dev/null | head -5 || echo "N/A"
+echo "Current builder (full details):"
+docker buildx inspect 2>/dev/null || echo "N/A"
 echo "Available builders:"
 docker buildx ls 2>/dev/null || echo "N/A"
-echo "Docker info (storage driver, etc):"
-docker info --format '{{.Driver}} {{.CgroupDriver}}' 2>/dev/null || echo "N/A"
+echo "Docker daemon info:"
+docker info --format 'Driver: {{.Driver}}
+CgroupDriver: {{.CgroupDriver}}
+Registry Mirrors: {{.RegistryConfig.Mirrors}}
+Images: {{.Images}}
+Containers: {{.Containers}}' 2>/dev/null || echo "N/A"
+echo "Build cache info:"
+docker system df --format 'table {{.Type}}\t{{.Total}}\t{{.Size}}\t{{.Reclaimable}}' 2>/dev/null || echo "N/A"
 echo "============================"
 
 # Build Docker image using default Docker configuration
