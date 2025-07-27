@@ -86,7 +86,12 @@ while kill -0 $DOCKER_PID 2>/dev/null; do
     echo "Polling for metadata key: $key"
     
     # Try to get metadata (single attempt since container will retry)
-    value=$(buildkite-agent meta-data get "$key" 2>/dev/null) || value=""
+    if value=$(buildkite-agent meta-data get "$key" 2>&1); then
+      echo "Successfully got metadata for $key"
+    else
+      echo "Failed to get metadata for $key: $value"
+      value=""
+    fi
     
     # Send response back to container
     echo "$value" > "$SHARED_DIR/metadata_response.tmp"
