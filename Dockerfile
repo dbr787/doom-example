@@ -33,9 +33,9 @@ ENV DISPLAY=:1
 ARG DOOM_HASH
 RUN echo "Cache bust: $DOOM_HASH"
 COPY doom.rb /home/doom/doom.rb
-RUN chmod 755 /home/doom/doom.rb && chown doom:doom /home/doom/doom.rb
+RUN chmod 755 /home/doom/doom.rb
 
 USER doom
 WORKDIR /home/doom
 
-CMD ["./doom.rb"]
+CMD ["ruby", "doom.rb"]
