@@ -69,14 +69,14 @@ def ask_for_input(i, mode)
     {
       "steps" => [{
         "input" => "Move #{i}",
-        "fields" => [{"select" => "move#{i}", "options" => move_options}]
+        "fields" => [{"key" => "move#{i}", "select" => "Move", "options" => move_options}]
       }]
     }
   when "ai"
     {
       "steps" => [{
         "input" => "AI Move #{i}",
-        "fields" => [{"text" => "move#{i}", "default" => "ai", "hint" => "Type 'ai' for AI move"}]
+        "fields" => [{"key" => "move#{i}", "text" => "Move", "default" => "ai", "hint" => "Type 'ai' for AI move"}]
       }]
     }
   when "random"
@@ -84,7 +84,7 @@ def ask_for_input(i, mode)
     {
       "steps" => [{
         "input" => "Random Move #{i}",
-        "fields" => [{"select" => "move#{i}", "options" => move_options}]
+        "fields" => [{"key" => "move#{i}", "select" => "Move", "options" => move_options}]
       }]
     }
   end
