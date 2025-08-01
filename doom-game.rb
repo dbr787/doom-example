@@ -79,6 +79,14 @@ def ask_for_input(i, mode)
         "fields" => [{"text" => "move#{i}", "default" => "ai", "hint" => "Type 'ai' for AI move"}]
       }]
     }
+  when "random"
+    move_options = MOVES.map { |m| {label: "#{m[:emoji]} #{m[:label]}", value: m[:key]} }
+    {
+      "steps" => [{
+        "input" => "Random Move #{i}",
+        "fields" => [{"select" => "move#{i}", "options" => move_options}]
+      }]
+    }
   end
   
   upload_pipeline(pipeline.to_json)
