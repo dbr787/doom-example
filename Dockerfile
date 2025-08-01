@@ -1,41 +1,14 @@
-# Docker container for running interactive DOOM game in Buildkite pipelines
 FROM ubuntu:22.04
 
-ENV DEBIAN_FRONTEND=noninteractive
-
-# Install required packages for running DOOM and capturing gameplay
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    ruby \
-    xvfb \
-    xdotool \
-    ffmpeg \
-    chocolate-doom \
-    curl \
-    unzip \
-    nodejs \
-    npm \
+RUN apt-get update && apt-get install -y \
+    ruby xvfb xdotool ffmpeg chocolate-doom curl unzip nodejs npm wget \
+    && wget -qO- https://github.com/buildkite/agent/releases/latest/download/buildkite-agent-linux-amd64.tar.gz | tar -xz \
+    && mv buildkite-agent /usr/local/bin/ \
+    && npm install -g @anthropic-ai/claude-code \
+    && mkdir -p /usr/share/games/doom \
+    && curl -sL https://www.doomworld.com/3ddownloads/ports/shareware_doom_iwad.zip | unzip -j - -d /usr/share/games/doom/ \
     && rm -rf /var/lib/apt/lists/*
 
-# Install Claude Code CLI for AI integration
-RUN npm install -g @anthropic-ai/claude-code
-
-# Download DOOM shareware WAD file (free to use)
-RUN mkdir -p /usr/share/games/doom \
-    && curl -L -o /tmp/doom.zip "https://www.doomworld.com/3ddownloads/ports/shareware_doom_iwad.zip" \
-    && unzip -j /tmp/doom.zip -d /usr/share/games/doom/ \
-    && rm /tmp/doom.zip
-
-# Create non-root user for security
-RUN useradd --create-home doom
 ENV DISPLAY=:1
-
-# Copy game orchestration script (cache busted by file hash)
-ARG DOOM_HASH
-RUN echo "Cache bust: $DOOM_HASH"
-COPY doom.rb /home/doom/doom.rb
-RUN chmod 755 /home/doom/doom.rb
-
-USER doom
-WORKDIR /home/doom
-
-CMD ["ruby", "doom.rb"]
+COPY doom.rb /doom.rb
+CMD ["ruby", "/doom.rb"]
