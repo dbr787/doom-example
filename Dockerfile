@@ -15,5 +15,6 @@ RUN mkdir -p /usr/share/games/doom \
     && rm /tmp/doom.zip
 
 ENV DISPLAY=:1
+# Force rebuild - 2025-01-08
 COPY doom.rb /doom.rb
 CMD ["ruby", "/doom.rb"]
