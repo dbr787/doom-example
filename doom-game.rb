@@ -52,13 +52,15 @@ def start_doom(level)
   server_pid = spawn("Xvfb :1 -screen 0 320x240x24 > /dev/null 2>&1")
   Process.detach(server_pid)
   sleep 2
-  doom_pid = spawn("chocolate-doom -geometry 320x240 -iwad /usr/share/games/doom/DOOM1.WAD -warp 1 #{level} -nosound > /dev/null 2>&1")
+  doom_pid = spawn("/usr/games/chocolate-doom -geometry 320x240 -iwad /usr/share/games/doom/DOOM1.WAD -episode 1 > /dev/null 2>&1")
   Process.detach(doom_pid)
   doom_pid
 end
 
-def screenshot(i)
-  `ffmpeg -f x11grab -video_size 320x240 -i :1 -vframes 1 -y #{i}.png > /dev/null 2>&1`
+def capture_frame(i, duration)
+  system("ffmpeg -y -t #{duration} -video_size 320x240 -framerate 15 -f x11grab -i :1 #{i}.apng -loglevel warning")
+  system("rm ./frame_*.png 2>/dev/null")
+  system("ffmpeg -i #{i}.apng -vsync 0 frame_%03d.png -loglevel warning 2>/dev/null")
 end
 
 def send_key(key)
@@ -134,12 +136,14 @@ signal_doom(doom_pid, "STOP")
 
 i = 1
 loop do
-  # Resume game, capture screenshot, pause again
+  # Resume game, capture frames, pause again
   signal_doom(doom_pid, "CONT")
-  sleep(i == 1 ? 2.5 : 1.25)  # Let it run longer on first frame
-  screenshot(i)
+  recording = Thread.new { capture_frame(i, i == 1 ? 2.5 : 1.25) }
+  recording.join
   signal_doom(doom_pid, "STOP")
   
+  # Rename APNG to PNG for upload
+  File.rename("#{i}.apng", "#{i}.png") if File.exist?("#{i}.apng")
   upload_artifact("#{i}.png")
   ask_for_input(i, mode)
   
