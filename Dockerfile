@@ -15,6 +15,6 @@ RUN mkdir -p /usr/share/games/doom \
     && rm /tmp/doom.zip
 
 ENV DISPLAY=:1
-# Force rebuild - 2025-01-08
-COPY doom.rb /doom.rb
-CMD ["ruby", "/doom.rb"]
+# Force rebuild - 2025-01-08 - rename file to force refresh
+COPY doom-game.rb /doom-game.rb
+CMD ["ruby", "/doom-game.rb"]
