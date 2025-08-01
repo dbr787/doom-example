@@ -80,11 +80,12 @@ def ask_for_input(i, mode)
       }]
     }
   when "random"
-    move_options = MOVES.map { |m| {label: "#{m[:emoji]} #{m[:label]}", value: m[:key]} }
+    move = MOVES.sample
     {
       "steps" => [{
-        "input" => "Random Move #{i}",
-        "fields" => [{"key" => "move#{i}", "select" => "Move", "options" => move_options}]
+        "label" => "🎲 #{move[:emoji]}",
+        "key" => "step_#{i}",
+        "command" => "echo '🎲 Random #{move[:label]}' && buildkite-agent meta-data set 'move#{i}' '#{move[:key]}'"
       }]
     }
   end
@@ -141,7 +142,7 @@ loop do
   
   if move_value
     send_key(move_value)
-    annotate("**Move #{i}:** #{move_emoji(move_value)} #{reason}")
+    annotate(%(<div class="center"><img class="block mx-auto" width="640" height="480" src="artifact://#{i}.png"><h2 class="mt2 center">**Move #{i}:** #{move_emoji(move_value)} #{reason}</h2></div>))
   end
   
   i += 1
