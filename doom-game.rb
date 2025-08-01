@@ -97,7 +97,7 @@ def ask_for_input(i, mode)
         "label" => "🎲 #{move[:emoji]}",
         "key" => "step_#{i}",
         "command" => "echo '🎲 Random #{move[:label]}' && buildkite-agent meta-data set 'move#{i}' '#{move[:key]}'",
-        "depends_on" => i == 1 ? nil : "step_#{i-1}"
+        "depends_on" => i == 0 ? nil : "step_#{i-1}"
       }]
     }
   end
