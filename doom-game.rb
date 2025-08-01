@@ -25,10 +25,11 @@ def get_metadata(key)
   return ""
 end
 
-def upload_pipeline(yaml)
+def upload_pipeline(json_content)
   puts "🔄 Uploading pipeline..."
+  puts "Pipeline JSON: #{json_content}"
   result = IO.popen("buildkite-agent pipeline upload --replace 2>&1", "w") do |p| 
-    p.write(yaml)
+    p.write(json_content)
   end
   puts "Pipeline upload result: #{$?.exitstatus}"
   if $?.exitstatus != 0
