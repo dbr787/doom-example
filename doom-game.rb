@@ -49,9 +49,12 @@ end
 
 # Game functions
 def start_doom(level)
-  spawn("Xvfb :1 -screen 0 320x240x24 > /dev/null 2>&1")
+  server_pid = spawn("Xvfb :1 -screen 0 320x240x24 > /dev/null 2>&1")
+  Process.detach(server_pid)
   sleep 2
-  spawn("chocolate-doom -geometry 320x240 -iwad /usr/share/games/doom/DOOM1.WAD -warp 1 #{level} -nosound > /dev/null 2>&1")
+  doom_pid = spawn("chocolate-doom -geometry 320x240 -iwad /usr/share/games/doom/DOOM1.WAD -warp 1 #{level} -nosound > /dev/null 2>&1")
+  Process.detach(doom_pid)
+  doom_pid
 end
 
 def screenshot(i)
@@ -60,6 +63,12 @@ end
 
 def send_key(key)
   `DISPLAY=:1 xdotool key #{key}`
+end
+
+def signal_doom(pid, signal)
+  Process.kill(signal, pid)
+rescue Errno::ESRCH
+  # Process doesn't exist
 end
 
 def ask_for_input(i, mode)
@@ -121,7 +130,7 @@ mode = wait_for_input("game_mode")
 level = wait_for_input("level")
 
 doom_pid = start_doom(level)
-system("kill -STOP #{doom_pid}")
+signal_doom(doom_pid, "STOP")
 
 i = 1
 loop do
