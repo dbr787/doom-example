@@ -18,11 +18,24 @@ end
 
 # Buildkite integration - direct calls
 def get_metadata(key)
-  `buildkite-agent meta-data get "#{key}" 2>/dev/null`.strip
+  puts "🔍 Getting metadata for key: #{key}"
+  result = `buildkite-agent meta-data get "#{key}" 2>&1`.strip
+  puts "Metadata result: '#{result}' (exit: #{$?.exitstatus})"
+  return result if $?.exitstatus == 0
+  return ""
 end
 
 def upload_pipeline(yaml)
-  IO.popen("buildkite-agent pipeline upload --replace", "w") { |p| p.write(yaml) }
+  puts "🔄 Uploading pipeline..."
+  result = IO.popen("buildkite-agent pipeline upload --replace 2>&1", "w") do |p| 
+    p.write(yaml)
+  end
+  puts "Pipeline upload result: #{$?.exitstatus}"
+  if $?.exitstatus != 0
+    puts "❌ Pipeline upload failed!"
+  else
+    puts "✅ Pipeline uploaded successfully"
+  end
 end
 
 def upload_artifact(file)
