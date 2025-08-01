@@ -134,38 +134,37 @@ level = wait_for_input("level")
 doom_pid = start_doom(level)
 signal_doom(doom_pid, "STOP")
 
-i = 1
+i = 0
+move = nil
 loop do
-  # Resume game, capture frames, pause again
+  # Resume game, capture frame with move execution, pause again  
   signal_doom(doom_pid, "CONT")
-  recording = Thread.new { capture_frame(i, i == 1 ? 2.5 : 1.25) }
+  recording = Thread.new { capture_frame(i, i == 0 ? 2.5 : 1.25) }
+  send_key(move) if move  # Execute previous move during recording
   recording.join
   signal_doom(doom_pid, "STOP")
   
   # Rename APNG to PNG for upload
   File.rename("#{i}.apng", "#{i}.png") if File.exist?("#{i}.apng")
   upload_artifact("#{i}.png")
+  
+  # Create annotation with current frame
+  if i == 0
+    reason = "🎮 Game Start"
+  else
+    reason = "Move executed"
+  end
+  annotate(%(<div class="center"><img class="block mx-auto" width="640" height="480" src="artifact://#{i}.png"><h2 class="mt2 center">#{reason}</h2></div>))
+  
   ask_for_input(i, mode)
   
   move_input = wait_for_input("move#{i}")
   
   if mode == "ai" && move_input == "ai"
-    move_value = get_ai_move(i)
-    reason = "🤖 AI move"
+    move = get_ai_move(i)
   else
-    move = MOVES.find { |m| m[:key] == move_input }
-    move_value = move[:value]
-    reason = "👤 #{move[:label]}"
-  end
-  
-  if move_value
-    # Resume game to execute move
-    signal_doom(doom_pid, "CONT")
-    send_key(move_value)
-    sleep 0.5
-    signal_doom(doom_pid, "STOP")
-    
-    annotate(%(<div class="center"><img class="block mx-auto" width="640" height="480" src="artifact://#{i}.png"><h2 class="mt2 center">**Move #{i}:** #{move_emoji(move_value)} #{reason}</h2></div>))
+    move_obj = MOVES.find { |m| m[:key] == move_input }
+    move = move_obj[:value]
   end
   
   i += 1
