@@ -39,5 +39,8 @@ steps:
   - label: ":rage4: Run Doom"
     key: run-doom
     depends_on: mode
-    command: "./run-doom.sh"
+    plugins:
+      - docker-compose#v5.10.0:
+          run: doom-game
+          propagate-environment: true
     timeout_in_minutes: 60
