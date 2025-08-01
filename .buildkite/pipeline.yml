@@ -43,4 +43,7 @@ steps:
       - docker-compose#v5.10.0:
           run: doom-game
           propagate-environment: true
+          environment:
+            - BUILDKITE_AGENT_JOB_API_TOKEN
+            - BUILDKITE_AGENT_JOB_API_SOCKET
     timeout_in_minutes: 60
