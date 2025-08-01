@@ -134,9 +134,13 @@ signal_doom(doom_pid, "STOP")
 
 i = 1
 loop do
+  # Resume game, capture screenshot, pause again
+  signal_doom(doom_pid, "CONT")
+  sleep(i == 1 ? 2.5 : 1.25)  # Let it run longer on first frame
   screenshot(i)
-  upload_artifact("#{i}.png")
+  signal_doom(doom_pid, "STOP")
   
+  upload_artifact("#{i}.png")
   ask_for_input(i, mode)
   
   move_input = wait_for_input("move#{i}")
@@ -151,10 +155,14 @@ loop do
   end
   
   if move_value
+    # Resume game to execute move
+    signal_doom(doom_pid, "CONT")
     send_key(move_value)
+    sleep 0.5
+    signal_doom(doom_pid, "STOP")
+    
     annotate(%(<div class="center"><img class="block mx-auto" width="640" height="480" src="artifact://#{i}.png"><h2 class="mt2 center">**Move #{i}:** #{move_emoji(move_value)} #{reason}</h2></div>))
   end
   
   i += 1
-  sleep 0.5
 end
