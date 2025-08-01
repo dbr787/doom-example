@@ -49,13 +49,13 @@ end
 
 # Game functions
 def start_doom(level)
-  spawn("Xvfb :1 -screen 0 800x600x24 > /dev/null 2>&1")
+  spawn("Xvfb :1 -screen 0 320x240x24 > /dev/null 2>&1")
   sleep 2
-  spawn("chocolate-doom -iwad /usr/share/games/doom/DOOM1.WAD -warp 1 #{level} -window > /dev/null 2>&1")
+  spawn("chocolate-doom -geometry 320x240 -iwad /usr/share/games/doom/DOOM1.WAD -warp 1 #{level} -nosound > /dev/null 2>&1")
 end
 
 def screenshot(i)
-  `ffmpeg -f x11grab -video_size 800x600 -i :1 -vframes 1 -y #{i}.png > /dev/null 2>&1`
+  `ffmpeg -f x11grab -video_size 320x240 -i :1 -vframes 1 -y #{i}.png > /dev/null 2>&1`
 end
 
 def send_key(key)
