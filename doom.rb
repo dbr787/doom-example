@@ -74,33 +74,30 @@ def ask_for_input(i, mode)
   pipeline = case mode
   when "human"
     move_options = MOVES.map { |m| {label: "#{m[:emoji]} #{m[:label]}", value: m[:key]} }
-    {
-      "steps" => [{
-        "input" => "Move #{i}",
-        "key" => "step_#{i}",
-        "depends_on" => i == 0 ? nil : "step_#{i-1}",
-        "fields" => [{"key" => "move#{i}", "select" => "Choose your move", "options" => move_options}]
-      }]
+    step = {
+      "input" => "Move #{i}",
+      "key" => "step_#{i}",
+      "fields" => [{"key" => "move#{i}", "select" => "Choose your move", "options" => move_options}]
     }
+    step["depends_on"] = "step_#{i-1}" if i > 0
+    {"steps" => [step]}
   when "ai"
-    {
-      "steps" => [{
-        "input" => "AI Move #{i}",
-        "key" => "step_#{i}",
-        "depends_on" => i == 0 ? nil : "step_#{i-1}",
-        "fields" => [{"key" => "move#{i}", "text" => "Type 'ai' for AI move", "default" => "ai"}]
-      }]
+    step = {
+      "input" => "AI Move #{i}",
+      "key" => "step_#{i}",
+      "fields" => [{"key" => "move#{i}", "text" => "Type 'ai' for AI move", "default" => "ai"}]
     }
+    step["depends_on"] = "step_#{i-1}" if i > 0
+    {"steps" => [step]}
   when "random"
     move = MOVES.sample
-    {
-      "steps" => [{
-        "label" => "🎲 #{move[:emoji]}",
-        "key" => "step_#{i}",
-        "command" => "echo '🎲 Random #{move[:label]}' && buildkite-agent meta-data set 'move#{i}' '#{move[:key]}'",
-        "depends_on" => i == 0 ? nil : "step_#{i-1}"
-      }]
+    step = {
+      "label" => "🎲 #{move[:emoji]}",
+      "key" => "step_#{i}",
+      "command" => "echo '🎲 Random #{move[:label]}' && buildkite-agent meta-data set 'move#{i}' '#{move[:key]}'"
     }
+    step["depends_on"] = "step_#{i-1}" if i > 0
+    {"steps" => [step]}
   end
   
   upload_pipeline(pipeline.to_json)
