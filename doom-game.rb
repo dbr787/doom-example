@@ -71,7 +71,13 @@ def capture_frame(i, duration)
 end
 
 def send_key(key)
-  `DISPLAY=:1 xdotool key #{key}`
+  delay = case key
+  when "Control_L", "space" then 100
+  else 1000
+  end
+  
+  puts "🎹 Sending key '#{key}' with delay #{delay}ms"
+  system("DISPLAY=:1 xdotool key --delay #{delay} #{key}")
 end
 
 def signal_doom(pid, signal)
