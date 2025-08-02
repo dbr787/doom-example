@@ -4,6 +4,10 @@ README.md
 LICENSE.md
 *.md
 .claude/
+.buildkite/
+.env
+.env.example
+docker-compose.yml
 *.apng
 *.png
 *.json
