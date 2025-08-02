@@ -6,9 +6,9 @@ ENV['DISPLAY'] = ':1'
 
 # Game modes
 MODES = [
-  {key: "manual", emoji: "🎮"},
-  {key: "ai", emoji: "🤖"},
-  {key: "random", emoji: "🎲"}
+  {key: "manual", emoji: "🧑"},
+  {key: "random", emoji: "🎲"},
+  {key: "ai", emoji: "🤖"}
 ]
 
 # Game controls
@@ -21,9 +21,7 @@ MOVES = [
   {label: "Open", key: "Space", value: "space", emoji: "🚪"}
 ]
 
-def move_emoji(value)
-  MOVES.find { |m| m[:value] == value }&.dig(:emoji) || "❓"
-end
+
 
 # Buildkite integration - direct calls
 def get_metadata(key)
@@ -156,20 +154,14 @@ loop do
   upload_artifact("#{i}.png")
   
   # Create annotation with current frame and move history
-  if i == 0
-    reason = "🎮 Game Start"
-  else
-    reason = "Move executed"
-  end
-  
   history_table = if move_history.empty?
     ""
   else
     rows = move_history.take(10).map { |entry| "<tr><td>#{entry[:mode_emoji]}</td><td>#{entry[:move_emoji]}</td></tr>" }.join
-    %(<table class="mt2 mx-auto"><thead><tr><th>Mode</th><th>Move</th></tr></thead><tbody>#{rows}</tbody></table>)
+    %(<table class="mt2 mx-auto" style="width: 640px;"><thead><tr><th>Mode</th><th>Move</th></tr></thead><tbody>#{rows}</tbody></table>)
   end
   
-  annotate(%(<div class="center"><img class="block mx-auto" width="640" height="480" src="artifact://#{i}.png"><h2 class="mt2 center">#{reason}</h2>#{history_table}</div>))
+  annotate(%(<div class="center"><img class="block mx-auto" width="640" height="480" src="artifact://#{i}.png">#{history_table}</div>))
   
   ask_for_input(i, mode)
   
