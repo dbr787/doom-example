@@ -4,11 +4,17 @@ require "json"
 
 ENV['DISPLAY'] = ':1'
 
-# Game mode emojis
+# Game modes
+MODES = {
+  MANUAL: "manual",
+  AI: "ai", 
+  RANDOM: "random"
+}
+
 MODE_EMOJIS = {
-  "manual" => "🎮",
-  "ai" => "🤖", 
-  "random" => "🎲"
+  MODES[:MANUAL] => "🎮",
+  MODES[:AI] => "🤖", 
+  MODES[:RANDOM] => "🎲"
 }
 
 # Game controls
@@ -81,7 +87,7 @@ end
 
 def ask_for_input(i, mode)
   pipeline = case mode
-  when "manual"
+  when MODES[:MANUAL]
     move_options = MOVES.map { |m| {label: "#{m[:emoji]} #{m[:label]}", value: m[:key]} }
     step = {
       "input" => "Move #{i}",
@@ -90,7 +96,7 @@ def ask_for_input(i, mode)
     }
     step["depends_on"] = "step_#{i-1}" if i > 0
     {"steps" => [step]}
-  when "ai"
+  when MODES[:AI]
     step = {
       "input" => "AI Move #{i}",
       "key" => "step_#{i}",
@@ -98,7 +104,7 @@ def ask_for_input(i, mode)
     }
     step["depends_on"] = "step_#{i-1}" if i > 0
     {"steps" => [step]}
-  when "random"
+  when MODES[:RANDOM]
     move = MOVES.sample
     step = {
       "label" => "🎲 #{move[:emoji]}",
@@ -175,7 +181,7 @@ loop do
   
   move_input = wait_for_input("move#{i}")
   
-  if mode == "ai" && move_input == "ai"
+  if mode == MODES[:AI] && move_input == "ai"
     move = get_ai_move(i)
     move_obj = MOVES.find { |m| m[:value] == move }
   else
