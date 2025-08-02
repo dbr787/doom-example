@@ -54,9 +54,7 @@ end
 def capture_frame(i, duration)
   system("ffmpeg -y -t #{duration} -video_size 320x240 -framerate 15 -f x11grab -i :1 #{i}.apng -loglevel warning")
   system("rm ./frame_*.png 2>/dev/null")
-  # Create both PNG and GIF for testing
   system("ffmpeg -i #{i}.apng -vsync 0 frame_%03d.png -loglevel warning 2>/dev/null")
-  system("ffmpeg -i #{i}.apng -vf 'scale=320:240:flags=neighbor' #{i}.gif -loglevel warning 2>/dev/null")
 end
 
 def send_key(key)
@@ -141,7 +139,6 @@ loop do
   
   File.rename("#{i}.apng", "#{i}.png") if File.exist?("#{i}.apng")
   upload_artifact("#{i}.png")
-  upload_artifact("#{i}.gif")
   
   history_table = if action_history.empty?
     ""
@@ -150,14 +147,7 @@ loop do
     %(<div style="text-align: center;"><table class="mt2" style="width: 640px; margin: 0 auto; display: inline-block;"><thead><tr><th class='center' width="213">Mode</th><th class='center' width="213">Action</th><th class='center' width="214">Turn</th></tr></thead><tbody>#{rows}</tbody></table></div>)
   end
   
-  # Test GIF vs PNG loading characteristics  
-  annotate(%(<div class="flex flex-column items-center">
-    <p>GIF (might load differently):</p>
-    <img width="640" height="480" src="artifact://#{i}.gif" style="image-rendering: pixelated;">
-    <p>PNG (current):</p>
-    <img width="640" height="480" src="artifact://#{i}.png">
-    #{history_table}
-  </div>))
+  annotate(%(<div class="flex flex-column items-center"><img width="640" height="480" src="artifact://#{i}.png">#{history_table}</div>))
   
   if mode == "random"
     action_input = ask_for_input(i, mode)
