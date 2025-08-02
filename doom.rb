@@ -76,7 +76,7 @@ def ask_for_input(i, mode)
   when "manual"
     move_options = MOVES.map { |m| {label: "#{m[:emoji]} #{m[:label]}", value: m[:key]} }
     step = {
-      "input" => "Move #{i}",
+      "input" => "Move #{i + 1}",
       "key" => "step_#{i}",
       "fields" => [{"key" => "move#{i}", "select" => "Choose your move", "options" => move_options}]
     }
@@ -84,7 +84,7 @@ def ask_for_input(i, mode)
     {"steps" => [step]}
   when "ai"
     step = {
-      "input" => "AI Move #{i}",
+      "input" => "AI Move #{i + 1}",
       "key" => "step_#{i}",
       "fields" => [{"key" => "move#{i}", "text" => "Type 'ai' for AI move", "default" => "ai"}]
     }
@@ -142,7 +142,7 @@ loop do
     ""
   else
     rows = move_history.map { |entry| "<tr><td class='center'>#{entry[:mode_emoji]}</td><td class='center'>#{entry[:move_emoji]}</td><td class='center'>#{entry[:turn]}</td></tr>" }.join
-    %(<div style="text-align: center;"><table class="mt2" style="width: 640px; margin: 0 auto; display: inline-block;"><thead><tr><th class='center'>Mode</th><th class='center'>Move</th><th class='center'>Turn</th></tr></thead><tbody>#{rows}</tbody></table></div>)
+    %(<div style="text-align: center;"><table class="mt2" style="width: 640px; margin: 0 auto; display: inline-block;"><thead><tr><th class='center'>Mode</th><th class='center'>Move</th><th class='center'>#</th></tr></thead><tbody>#{rows}</tbody></table></div>)
   end
   
   annotate(%(<div class="flex flex-column items-center"><img width="640" height="480" src="artifact://#{i}.png">#{history_table}</div>))
