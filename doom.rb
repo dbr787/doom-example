@@ -4,6 +4,13 @@ require "json"
 
 ENV['DISPLAY'] = ':1'
 
+# Game mode emojis
+MODE_EMOJIS = {
+  "manual" => "🎮",
+  "ai" => "🤖", 
+  "random" => "🎲"
+}
+
 # Game controls
 MOVES = [
   {label: "Forward", key: "Up", value: "Up", emoji: "⬆️"},
@@ -73,7 +80,6 @@ rescue Errno::ESRCH
 end
 
 def ask_for_input(i, mode)
-  puts "DEBUG: Mode received: '#{mode}' (#{mode.class})"
   pipeline = case mode
   when "manual"
     move_options = MOVES.map { |m| {label: "#{m[:emoji]} #{m[:label]}", value: m[:key]} }
@@ -103,9 +109,7 @@ def ask_for_input(i, mode)
     {"steps" => [step]}
   end
   
-  json_output = pipeline.to_json
-  puts "DEBUG: Pipeline JSON: #{json_output}"
-  upload_pipeline(json_output)
+  upload_pipeline(pipeline.to_json)
 end
 
 def get_ai_move(i)
@@ -138,6 +142,7 @@ signal_doom(doom_pid, "STOP")
 
 i = 0
 move = nil
+move_history = []
 loop do
   # Resume game, capture frame with move execution, pause again  
   signal_doom(doom_pid, "CONT")
@@ -150,13 +155,21 @@ loop do
   File.rename("#{i}.apng", "#{i}.png") if File.exist?("#{i}.apng")
   upload_artifact("#{i}.png")
   
-  # Create annotation with current frame
+  # Create annotation with current frame and move history
   if i == 0
     reason = "🎮 Game Start"
   else
     reason = "Move executed"
   end
-  annotate(%(<div class="center"><img class="block mx-auto" width="640" height="480" src="artifact://#{i}.png"><h2 class="mt2 center">#{reason}</h2></div>))
+  
+  history_table = if move_history.empty?
+    ""
+  else
+    rows = move_history.take(10).map { |entry| "<tr><td>#{entry[:mode_emoji]}</td><td>#{entry[:move_emoji]}</td></tr>" }.join
+    %(<table class="mt2 mx-auto"><thead><tr><th>Mode</th><th>Move</th></tr></thead><tbody>#{rows}</tbody></table>)
+  end
+  
+  annotate(%(<div class="center"><img class="block mx-auto" width="640" height="480" src="artifact://#{i}.png"><h2 class="mt2 center">#{reason}</h2>#{history_table}</div>))
   
   ask_for_input(i, mode)
   
@@ -164,9 +177,18 @@ loop do
   
   if mode == "ai" && move_input == "ai"
     move = get_ai_move(i)
+    move_obj = MOVES.find { |m| m[:value] == move }
   else
     move_obj = MOVES.find { |m| m[:key] == move_input }
     move = move_obj&.dig(:value)
+  end
+  
+  # Add to move history (most recent first)
+  if move_obj
+    move_history.unshift({
+      mode_emoji: MODE_EMOJIS[mode],
+      move_emoji: move_obj[:emoji]
+    })
   end
   
   i += 1
