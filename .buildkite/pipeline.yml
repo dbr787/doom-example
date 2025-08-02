@@ -6,11 +6,11 @@ steps:
         key: game_mode
         required: true
         options:
-          - label: "🧑 Let me decide each move"
+          - label: "🧑 Let me decide each action"
             value: "manual"
-          - label: "🎲 Randomly decide each move"
+          - label: "🎲 Randomly decide each action"
             value: "random"
-          - label: "🤖 Let AI decide each move"
+          - label: "🤖 Let AI decide each action"
             value: "ai"
       - select: "Level"
         key: level

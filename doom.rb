@@ -10,7 +10,7 @@ MODES = [
   {key: "ai", emoji: "🤖"}
 ]
 
-MOVES = [
+ACTIONS = [
   {label: "Forward", key: "Up", value: "Up", emoji: "⬆️"},
   {label: "Back", key: "Down", value: "Down", emoji: "⬇️"},
   {label: "Left", key: "Left", value: "Left", emoji: "⬅️"},
@@ -74,38 +74,38 @@ end
 def ask_for_input(i, mode)
   pipeline = case mode
   when "manual"
-    move_options = MOVES.map { |m| {label: "#{m[:emoji]} #{m[:label]}", value: m[:key]} }
+    action_options = ACTIONS.map { |a| {label: "#{a[:emoji]} #{a[:label]}", value: a[:key]} }
     step = {
-      "input" => "Move #{i + 1}",
+      "input" => "Action #{i + 1}",
       "key" => "step_#{i}",
-      "fields" => [{"key" => "move#{i}", "select" => "Choose your move", "options" => move_options}]
+      "fields" => [{"key" => "action#{i}", "select" => "Choose your action", "options" => action_options}]
     }
     step["depends_on"] = "step_#{i-1}" if i > 0
     {"steps" => [step]}
   when "ai"
     step = {
-      "input" => "AI Move #{i + 1}",
+      "input" => "AI Action #{i + 1}",
       "key" => "step_#{i}",
-      "fields" => [{"key" => "move#{i}", "text" => "Type 'ai' for AI move", "default" => "ai"}]
+      "fields" => [{"key" => "action#{i}", "text" => "Type 'ai' for AI action", "default" => "ai"}]
     }
     step["depends_on"] = "step_#{i-1}" if i > 0
     {"steps" => [step]}
   when "random"
-    move = MOVES.sample
-    puts "🎲 Random #{move[:label]}"
-    return move[:key]
+    action = ACTIONS.sample
+    puts "🎲 Random #{action[:label]}"
+    return action[:key]
   end
   
   upload_pipeline(pipeline.to_json)
 end
 
-def get_ai_move(i)
-  prompt = "Look at this DOOM game screenshot. Choose the best move: #{MOVES.map{|m| m[:key]}.join(', ')}. Respond with JSON: {\"move\":\"Up\",\"reason\":\"explanation\"}"
+def get_ai_action(i)
+  prompt = "Look at this DOOM game screenshot. Choose the best action: #{ACTIONS.map{|a| a[:key]}.join(', ')}. Respond with JSON: {\"action\":\"Up\",\"reason\":\"explanation\"}"
   response = `claude "#{prompt}" #{i}.png 2>/dev/null`.strip
   
-  if match = response.match(/"move":\s*"([^"]+)"/)
-    move_key = match[1]
-    MOVES.find { |m| m[:key] == move_key }&.dig(:value)
+  if match = response.match(/"action":\s*"([^"]+)"/)
+    action_key = match[1]
+    ACTIONS.find { |a| a[:key] == action_key }&.dig(:value)
   end
 end
 
@@ -126,48 +126,48 @@ doom_pid = start_doom(level)
 signal_doom(doom_pid, "STOP")
 
 i = 0
-move = nil
-move_history = []
+action = nil
+action_history = []
 loop do
   signal_doom(doom_pid, "CONT")
   recording = Thread.new { capture_frame(i, i == 0 ? 2.5 : 1.25) }
-  send_key(move) if move
+  send_key(action) if action
   recording.join
   signal_doom(doom_pid, "STOP")
   
   File.rename("#{i}.apng", "#{i}.png") if File.exist?("#{i}.apng")
   upload_artifact("#{i}.png")
   
-  history_table = if move_history.empty?
+  history_table = if action_history.empty?
     ""
   else
-    rows = move_history.map { |entry| "<tr><td class='center'>#{entry[:mode_emoji]}</td><td class='center'>#{entry[:move_emoji]}</td><td class='center'>#{entry[:turn]}</td></tr>" }.join
-    %(<div style="text-align: center;"><table class="mt2" style="width: 640px; margin: 0 auto; display: inline-block;"><thead><tr><th class='center'>Mode</th><th class='center'>Move</th><th class='center'>#</th></tr></thead><tbody>#{rows}</tbody></table></div>)
+    rows = action_history.map { |entry| "<tr><td class='center'>#{entry[:mode_emoji]}</td><td class='center'>#{entry[:action_emoji]}</td><td class='center'>#{entry[:turn]}</td></tr>" }.join
+    %(<div style="text-align: center;"><table class="mt2" style="width: 640px; margin: 0 auto; display: inline-block;"><thead><tr><th class='center'>Mode</th><th class='center'>Action</th><th class='center'>Turn</th></tr></thead><tbody>#{rows}</tbody></table></div>)
   end
   
   annotate(%(<div class="flex flex-column items-center"><img width="640" height="480" src="artifact://#{i}.png">#{history_table}</div>))
   
   if mode == "random"
-    move_input = ask_for_input(i, mode)
+    action_input = ask_for_input(i, mode)
   else
     ask_for_input(i, mode)
-    move_input = wait_for_input("move#{i}")
+    action_input = wait_for_input("action#{i}")
   end
   
-  if mode == "ai" && move_input == "ai"
-    move = get_ai_move(i)
-    move_obj = MOVES.find { |m| m[:value] == move }
+  if mode == "ai" && action_input == "ai"
+    action = get_ai_action(i)
+    action_obj = ACTIONS.find { |a| a[:value] == action }
   else
-    move_obj = MOVES.find { |m| m[:key] == move_input }
-    move = move_obj&.dig(:value)
+    action_obj = ACTIONS.find { |a| a[:key] == action_input }
+    action = action_obj&.dig(:value)
   end
   
-  if move_obj
+  if action_obj
     mode_obj = MODES.find { |m| m[:key] == mode }
-    move_history.unshift({
+    action_history.unshift({
       turn: i + 1,
       mode_emoji: mode_obj[:emoji],
-      move_emoji: move_obj[:emoji]
+      action_emoji: action_obj[:emoji]
     })
   end
   
