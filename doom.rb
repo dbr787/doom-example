@@ -61,7 +61,7 @@ def send_key(key)
   else 1000
   end
   
-  system("DISPLAY=:1 xdotool key --delay #{delay} #{key}")
+  system("xdotool key --delay #{delay} #{key}")
 end
 
 def signal_doom(pid, signal)
