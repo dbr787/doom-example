@@ -158,8 +158,13 @@ loop do
   
   File.rename("#{i}.apng", "#{i}.png") if File.exist?("#{i}.apng")
   
-  # Convert to base64 for instant loading
+  # Test if Buildkite supports base64 data URIs at all
+  # Create a minimal 1x1 red pixel PNG
+  test_base64 = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8/5+hHgAHggJ/PchI7wAAAABJRU5ErkJggg=="
+  
+  # Convert actual image to base64 for comparison
   base64_image = image_to_base64("#{i}.png")
+  puts "Base64 length: #{base64_image&.length || 'nil'}"
   
   # Still upload as artifact for backup
   upload_artifact("#{i}.png")
@@ -171,11 +176,25 @@ loop do
     %(<div style="text-align: center;"><table class="mt2" style="width: 640px; margin: 0 auto; display: inline-block;"><thead><tr><th class='center' width="213">Mode</th><th class='center' width="213">Action</th><th class='center' width="214">Turn</th></tr></thead><tbody>#{rows}</tbody></table></div>)
   end
   
-  # Use base64 if available, fallback to artifact
+  # Test both base64 approaches
   if base64_image
-    annotate(%(<div class="flex flex-column items-center"><img width="640" height="480" src="data:image/png;base64,#{base64_image}" style="image-rendering: pixelated; image-rendering: -moz-crisp-edges; image-rendering: crisp-edges;">#{history_table}</div>))
+    annotate(%(<div class="flex flex-column items-center">
+      <p>Testing base64 support:</p>
+      <img width="32" height="32" src="data:image/png;base64,#{test_base64}" style="border: 1px solid red;">
+      <p>Actual game frame:</p>
+      <img width="640" height="480" src="data:image/png;base64,#{base64_image}" style="image-rendering: pixelated; image-rendering: -moz-crisp-edges; image-rendering: crisp-edges;">
+      <p>Fallback artifact:</p>
+      <img width="640" height="480" src="artifact://#{i}.png">
+      #{history_table}
+    </div>))
   else
-    annotate(%(<div class="flex flex-column items-center"><img width="640" height="480" src="artifact://#{i}.png">#{history_table}</div>))
+    annotate(%(<div class="flex flex-column items-center">
+      <p>Testing base64 support:</p>
+      <img width="32" height="32" src="data:image/png;base64,#{test_base64}" style="border: 1px solid red;">
+      <p>Using artifact (base64 failed):</p>
+      <img width="640" height="480" src="artifact://#{i}.png">
+      #{history_table}
+    </div>))
   end
   
   if mode == "random"
