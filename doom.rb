@@ -4,14 +4,12 @@ require "json"
 
 ENV['DISPLAY'] = ':1'
 
-# Game modes
 MODES = [
   {key: "manual", emoji: "🧑"},
   {key: "random", emoji: "🎲"},
   {key: "ai", emoji: "🤖"}
 ]
 
-# Game controls
 MOVES = [
   {label: "Forward", key: "Up", value: "Up", emoji: "⬆️"},
   {label: "Back", key: "Down", value: "Down", emoji: "⬇️"},
@@ -21,9 +19,7 @@ MOVES = [
   {label: "Open", key: "Space", value: "space", emoji: "🚪"}
 ]
 
-
-
-# Buildkite integration - direct calls
+# Buildkite communication
 def get_metadata(key)
   result = `buildkite-agent meta-data get "#{key}" 2>/dev/null`.strip
   return result if $?.exitstatus == 0
@@ -44,7 +40,6 @@ def annotate(content)
   IO.popen("buildkite-agent annotate", "w") { |p| p.write(content) }
 end
 
-# Game functions
 def start_doom(level)
   server_pid = spawn("Xvfb :1 -screen 0 320x240x24 > /dev/null 2>&1")
   Process.detach(server_pid)
@@ -74,7 +69,6 @@ end
 def signal_doom(pid, signal)
   Process.kill(signal, pid)
 rescue Errno::ESRCH
-  # Process doesn't exist
 end
 
 def ask_for_input(i, mode)
@@ -130,8 +124,6 @@ def wait_for_input(key)
   exit 1
 end
 
-# Main game loop
-
 mode = wait_for_input("game_mode")
 level = wait_for_input("level")
 
@@ -142,18 +134,15 @@ i = 0
 move = nil
 move_history = []
 loop do
-  # Resume game, capture frame with move execution, pause again  
   signal_doom(doom_pid, "CONT")
   recording = Thread.new { capture_frame(i, i == 0 ? 2.5 : 1.25) }
-  send_key(move) if move  # Execute previous move during recording
+  send_key(move) if move
   recording.join
   signal_doom(doom_pid, "STOP")
   
-  # Rename APNG to PNG for upload
   File.rename("#{i}.apng", "#{i}.png") if File.exist?("#{i}.apng")
   upload_artifact("#{i}.png")
   
-  # Create annotation with current frame and move history
   history_table = if move_history.empty?
     ""
   else
@@ -175,7 +164,6 @@ loop do
     move = move_obj&.dig(:value)
   end
   
-  # Add to move history (most recent first)
   if move_obj
     mode_obj = MODES.find { |m| m[:key] == mode }
     move_history.unshift({
