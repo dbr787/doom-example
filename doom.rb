@@ -57,6 +57,11 @@ def capture_frame(i, duration)
   system("ffmpeg -i #{i}.apng -vsync 0 frame_%03d.png -loglevel warning 2>/dev/null")
 end
 
+def image_to_base64(filename)
+  require 'base64'
+  Base64.strict_encode64(File.read(filename))
+end
+
 def send_key(key)
   delay = case key
   when "Control_L", "space" then 100
@@ -138,6 +143,11 @@ loop do
   signal_doom(doom_pid, "STOP")
   
   File.rename("#{i}.apng", "#{i}.png") if File.exist?("#{i}.apng")
+  
+  # Convert to base64 for instant loading
+  base64_image = image_to_base64("#{i}.png")
+  
+  # Still upload as artifact for backup
   upload_artifact("#{i}.png")
   
   history_table = if action_history.empty?
@@ -147,7 +157,7 @@ loop do
     %(<div style="text-align: center;"><table class="mt2" style="width: 640px; margin: 0 auto; display: inline-block;"><thead><tr><th class='center' width="213">Mode</th><th class='center' width="213">Action</th><th class='center' width="214">Turn</th></tr></thead><tbody>#{rows}</tbody></table></div>)
   end
   
-  annotate(%(<div class="flex flex-column items-center"><img width="640" height="480" src="artifact://#{i}.png">#{history_table}</div>))
+  annotate(%(<div class="flex flex-column items-center"><img width="640" height="480" src="data:image/png;base64,#{base64_image}" style="image-rendering: pixelated; image-rendering: -moz-crisp-edges; image-rendering: crisp-edges;">#{history_table}</div>))
   
   if mode == "random"
     action_input = ask_for_input(i, mode)
