@@ -147,7 +147,7 @@ loop do
     ""
   else
     rows = move_history.take(10).map { |entry| "<tr><td>#{entry[:mode_emoji]}</td><td>#{entry[:move_emoji]}</td></tr>" }.join
-    %(<table class="mt2 mx-auto" style="width: 640px;"><thead><tr><th>Mode</th><th>Move</th></tr></thead><tbody>#{rows}</tbody></table>)
+    %(<table class="mt2" style="width: 640px; margin: 0 auto;"><thead><tr><th>Mode</th><th>Move</th></tr></thead><tbody>#{rows}</tbody></table>)
   end
   
   annotate(%(<div class="center"><img class="block mx-auto" width="640" height="480" src="artifact://#{i}.png">#{history_table}</div>))
