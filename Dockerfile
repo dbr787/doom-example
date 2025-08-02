@@ -15,7 +15,5 @@ RUN mkdir -p /usr/share/games/doom \
     && rm /tmp/doom.zip
 
 ENV DISPLAY=:1
-# Clear any old files and copy new one with different name
-RUN rm -f /doom.rb /doom-game.rb
 COPY doom-game.rb /game.rb
 CMD ["ruby", "/game.rb"]

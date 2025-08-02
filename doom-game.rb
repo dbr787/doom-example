@@ -18,24 +18,14 @@ end
 
 # Buildkite integration - direct calls
 def get_metadata(key)
-  puts "🔍 Getting metadata for key: #{key}"
-  result = `buildkite-agent meta-data get "#{key}" 2>&1`.strip
-  puts "Metadata result: '#{result}' (exit: #{$?.exitstatus})"
+  result = `buildkite-agent meta-data get "#{key}" 2>/dev/null`.strip
   return result if $?.exitstatus == 0
   return ""
 end
 
 def upload_pipeline(json_content)
-  puts "🔄 Uploading pipeline..."
-  puts "Pipeline JSON: #{json_content}"
-  result = IO.popen("buildkite-agent pipeline upload --replace 2>&1", "w") do |p| 
+  IO.popen("buildkite-agent pipeline upload --replace", "w") do |p| 
     p.write(json_content)
-  end
-  puts "Pipeline upload result: #{$?.exitstatus}"
-  if $?.exitstatus != 0
-    puts "❌ Pipeline upload failed!"
-  else
-    puts "✅ Pipeline uploaded successfully"
   end
 end
 
@@ -49,16 +39,12 @@ end
 
 # Game functions
 def start_doom(level)
-  puts "🎮 Starting Xvfb display..."
   server_pid = spawn("Xvfb :1 -screen 0 320x240x24 > /dev/null 2>&1")
   Process.detach(server_pid)
   sleep 2
   
-  puts "🎮 Starting DOOM directly in level E1M#{level}..."
   doom_pid = spawn("/usr/games/chocolate-doom -geometry 320x240 -iwad /usr/share/games/doom/DOOM1.WAD -warp 1 #{level} -nomusic -nosound")
   Process.detach(doom_pid)
-  
-  puts "🎮 DOOM started with PID: #{doom_pid}, waiting for level to load..."
   sleep 3  # Give time for level to load
   
   doom_pid
@@ -76,7 +62,6 @@ def send_key(key)
   else 1000
   end
   
-  puts "🎹 Sending key '#{key}' with delay #{delay}ms"
   system("DISPLAY=:1 xdotool key --delay #{delay} #{key}")
 end
 
@@ -139,7 +124,6 @@ def wait_for_input(key)
 end
 
 # Main game loop
-puts "🎮 Starting DOOM..."
 
 mode = wait_for_input("game_mode")
 level = wait_for_input("level")
@@ -172,20 +156,12 @@ loop do
   ask_for_input(i, mode)
   
   move_input = wait_for_input("move#{i}")
-  puts "🎯 Got move input: '#{move_input}' for move #{i}"
   
   if mode == "ai" && move_input == "ai"
     move = get_ai_move(i)
-    puts "🤖 AI selected move: #{move}"
   else
     move_obj = MOVES.find { |m| m[:key] == move_input }
-    if move_obj
-      move = move_obj[:value]
-      puts "👤 Human selected move: #{move_input} -> #{move}"
-    else
-      puts "❌ Unknown move input: #{move_input}"
-      move = nil
-    end
+    move = move_obj&.dig(:value)
   end
   
   i += 1
