@@ -60,7 +60,15 @@ end
 def image_to_base64(filename)
   require 'base64'
   if File.exist?(filename)
-    puts "📸 Encoding #{filename} (#{File.size(filename)} bytes)"
+    file_size = File.size(filename)
+    puts "📸 Encoding #{filename} (#{file_size} bytes)"
+    
+    # Skip base64 for files larger than 100KB to avoid annotation limits
+    if file_size > 100_000
+      puts "⚠️ File too large for base64, using artifact instead"
+      return nil
+    end
+    
     Base64.strict_encode64(File.read(filename, mode: 'rb'))
   else
     puts "❌ File #{filename} not found"
