@@ -59,7 +59,13 @@ end
 
 def image_to_base64(filename)
   require 'base64'
-  Base64.strict_encode64(File.read(filename))
+  if File.exist?(filename)
+    puts "📸 Encoding #{filename} (#{File.size(filename)} bytes)"
+    Base64.strict_encode64(File.read(filename, mode: 'rb'))
+  else
+    puts "❌ File #{filename} not found"
+    nil
+  end
 end
 
 def send_key(key)
@@ -157,7 +163,12 @@ loop do
     %(<div style="text-align: center;"><table class="mt2" style="width: 640px; margin: 0 auto; display: inline-block;"><thead><tr><th class='center' width="213">Mode</th><th class='center' width="213">Action</th><th class='center' width="214">Turn</th></tr></thead><tbody>#{rows}</tbody></table></div>)
   end
   
-  annotate(%(<div class="flex flex-column items-center"><img width="640" height="480" src="data:image/png;base64,#{base64_image}" style="image-rendering: pixelated; image-rendering: -moz-crisp-edges; image-rendering: crisp-edges;">#{history_table}</div>))
+  # Use base64 if available, fallback to artifact
+  if base64_image
+    annotate(%(<div class="flex flex-column items-center"><img width="640" height="480" src="data:image/png;base64,#{base64_image}" style="image-rendering: pixelated; image-rendering: -moz-crisp-edges; image-rendering: crisp-edges;">#{history_table}</div>))
+  else
+    annotate(%(<div class="flex flex-column items-center"><img width="640" height="480" src="artifact://#{i}.png">#{history_table}</div>))
+  end
   
   if mode == "random"
     action_input = ask_for_input(i, mode)
