@@ -92,13 +92,8 @@ def ask_for_input(i, mode)
     {"steps" => [step]}
   when "random"
     move = MOVES.sample
-    step = {
-      "label" => "🎲 #{move[:emoji]}",
-      "key" => "step_#{i}",
-      "command" => "echo '🎲 Random #{move[:label]}' && buildkite-agent meta-data set 'move#{i}' '#{move[:key]}'"
-    }
-    step["depends_on"] = "step_#{i-1}" if i > 0
-    {"steps" => [step]}
+    puts "🎲 Random #{move[:label]}"
+    return move[:key]
   end
   
   upload_pipeline(pipeline.to_json)
@@ -152,9 +147,12 @@ loop do
   
   annotate(%(<div class="flex flex-column items-center"><img style="width: 640px; height: 480px;" src="artifact://#{i}.png">#{history_table}</div>))
   
-  ask_for_input(i, mode)
-  
-  move_input = wait_for_input("move#{i}")
+  if mode == "random"
+    move_input = ask_for_input(i, mode)
+  else
+    ask_for_input(i, mode)
+    move_input = wait_for_input("move#{i}")
+  end
   
   if mode == "ai" && move_input == "ai"
     move = get_ai_move(i)
