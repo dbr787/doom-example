@@ -159,12 +159,20 @@ loop do
   ask_for_input(i, mode)
   
   move_input = wait_for_input("move#{i}")
+  puts "🎯 Got move input: '#{move_input}' for move #{i}"
   
   if mode == "ai" && move_input == "ai"
     move = get_ai_move(i)
+    puts "🤖 AI selected move: #{move}"
   else
     move_obj = MOVES.find { |m| m[:key] == move_input }
-    move = move_obj[:value]
+    if move_obj
+      move = move_obj[:value]
+      puts "👤 Human selected move: #{move_input} -> #{move}"
+    else
+      puts "❌ Unknown move input: #{move_input}"
+      move = nil
+    end
   end
   
   i += 1
