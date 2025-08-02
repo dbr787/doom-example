@@ -119,8 +119,10 @@ def wait_for_input(key)
   exit 1
 end
 
+puts "🎮 Doom starting up, waiting for game configuration..."
 mode = wait_for_input("game_mode")
 level = wait_for_input("level")
+puts "🚀 Game mode: #{mode}, Level: #{level}"
 
 doom_pid = start_doom(level)
 signal_doom(doom_pid, "STOP")

@@ -1,5 +1,5 @@
 services:
-  doom-game:
+  doom:
     build: .
     volumes:
       - "${BUILDKITE_AGENT_JOB_API_SOCKET}:${BUILDKITE_AGENT_JOB_API_SOCKET}"
