@@ -49,11 +49,18 @@ end
 
 # Game functions
 def start_doom(level)
+  puts "🎮 Starting Xvfb display..."
   server_pid = spawn("Xvfb :1 -screen 0 320x240x24 > /dev/null 2>&1")
   Process.detach(server_pid)
   sleep 2
-  doom_pid = spawn("/usr/games/chocolate-doom -geometry 320x240 -iwad /usr/share/games/doom/DOOM1.WAD -episode 1 > /dev/null 2>&1")
+  
+  puts "🎮 Starting DOOM directly in level E1M#{level}..."
+  doom_pid = spawn("/usr/games/chocolate-doom -geometry 320x240 -iwad /usr/share/games/doom/DOOM1.WAD -warp 1 #{level} -nomusic -nosound")
   Process.detach(doom_pid)
+  
+  puts "🎮 DOOM started with PID: #{doom_pid}, waiting for level to load..."
+  sleep 3  # Give time for level to load
+  
   doom_pid
 end
 
