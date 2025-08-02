@@ -142,7 +142,7 @@ loop do
     ""
   else
     rows = action_history.map { |entry| "<tr><td class='center'>#{entry[:mode_emoji]}</td><td class='center'>#{entry[:action_emoji]}</td><td class='center'>#{entry[:turn]}</td></tr>" }.join
-    %(<div style="text-align: center;"><table class="mt2" style="width: 640px; margin: 0 auto; display: inline-block;"><thead><tr><th class='center'>Mode</th><th class='center'>Action</th><th class='center'>Turn</th></tr></thead><tbody>#{rows}</tbody></table></div>)
+    %(<div style="text-align: center;"><table class="mt2" style="width: 640px; margin: 0 auto; display: inline-block; table-layout: fixed;"><thead><tr><th class='center' style='width: 33.33%;'>Mode</th><th class='center' style='width: 33.33%;'>Action</th><th class='center' style='width: 33.33%;'>Turn</th></tr></thead><tbody>#{rows}</tbody></table></div>)
   end
   
   annotate(%(<div class="flex flex-column items-center"><img width="640" height="480" src="artifact://#{i}.png">#{history_table}</div>))
