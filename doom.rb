@@ -100,7 +100,9 @@ def ask_for_input(i, mode)
     {"steps" => [step]}
   end
   
-  upload_pipeline(pipeline.to_json)
+  json_output = pipeline.to_json
+  puts "DEBUG: Pipeline JSON: #{json_output}"
+  upload_pipeline(json_output)
 end
 
 def get_ai_move(i)
