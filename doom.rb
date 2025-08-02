@@ -141,8 +141,8 @@ loop do
   history_table = if move_history.empty?
     ""
   else
-    rows = move_history.take(10).map { |entry| "<tr><td>#{entry[:mode_emoji]}</td><td>#{entry[:move_emoji]}</td></tr>" }.join
-    %(<div style="text-align: center;"><table class="mt2" style="width: 640px; margin: 0 auto; display: inline-block;"><thead><tr><th>Mode</th><th>Move</th></tr></thead><tbody>#{rows}</tbody></table></div>)
+    rows = move_history.map { |entry| "<tr><td style='text-align: center;'>#{entry[:mode_emoji]}</td><td style='text-align: center;'>#{entry[:move_emoji]}</td></tr>" }.join
+    %(<div style="text-align: center;"><table class="mt2" style="width: 640px; margin: 0 auto; display: inline-block;"><thead><tr><th style='text-align: center;'>Mode</th><th style='text-align: center;'>Move</th></tr></thead><tbody>#{rows}</tbody></table></div>)
   end
   
   annotate(%(<div class="flex flex-column items-center"><img width="640" height="480" src="artifact://#{i}.png">#{history_table}</div>))
