@@ -21,6 +21,5 @@ RUN mkdir -p /usr/share/games/doom \
     && rm /tmp/doom.zip
 
 # App code (changes most frequently)
-ENV DISPLAY=:1
 COPY doom.rb /doom.rb
 CMD ["ruby", "/doom.rb"]

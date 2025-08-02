@@ -2,6 +2,8 @@
 
 require "json"
 
+ENV['DISPLAY'] = ':1'
+
 # Game controls
 MOVES = [
   {label: "Forward", key: "Up", value: "Up", emoji: "⬆️"},
