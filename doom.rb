@@ -41,11 +41,10 @@ end
 def start_doom(level)
   server_pid = spawn("Xvfb :1 -screen 0 320x240x24 > /dev/null 2>&1")
   Process.detach(server_pid)
-  sleep 2
+  sleep 1
   
   doom_pid = spawn("/usr/games/chocolate-doom -geometry 320x240 -iwad /usr/share/games/doom/DOOM1.WAD -warp 1 #{level} -nomusic -nosound")
   Process.detach(doom_pid)
-  sleep 3  # Give time for level to load
   
   doom_pid
 end
@@ -78,14 +77,18 @@ def ask_for_input(i, mode)
     {
       "steps" => [{
         "input" => "Move #{i}",
-        "fields" => [{"key" => "move#{i}", "select" => "Move", "options" => move_options}]
+        "key" => "step_#{i}",
+        "depends_on" => i == 0 ? nil : "step_#{i-1}",
+        "fields" => [{"key" => "move#{i}", "select" => "Choose your move", "options" => move_options}]
       }]
     }
   when "ai"
     {
       "steps" => [{
         "input" => "AI Move #{i}",
-        "fields" => [{"key" => "move#{i}", "text" => "Move", "default" => "ai", "hint" => "Type 'ai' for AI move"}]
+        "key" => "step_#{i}",
+        "depends_on" => i == 0 ? nil : "step_#{i-1}",
+        "fields" => [{"key" => "move#{i}", "text" => "Type 'ai' for AI move", "default" => "ai"}]
       }]
     }
   when "random"
