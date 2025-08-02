@@ -145,7 +145,7 @@ loop do
     %(<div style="text-align: center;"><table class="mt2" style="width: 640px; margin: 0 auto; display: inline-block;"><thead><tr><th>Mode</th><th>Move</th></tr></thead><tbody>#{rows}</tbody></table></div>)
   end
   
-  annotate(%(<div class="flex flex-column items-center"><img style="width: 640px; height: 480px;" src="artifact://#{i}.png">#{history_table}</div>))
+  annotate(%(<div class="flex flex-column items-center"><img width="640" height="480" src="artifact://#{i}.png">#{history_table}</div>))
   
   if mode == "random"
     move_input = ask_for_input(i, mode)
