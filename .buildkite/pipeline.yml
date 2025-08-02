@@ -6,7 +6,7 @@ steps:
         key: game_mode
         required: true
         options:
-          - label: "👆 Let me decide each move"
+          - label: "🧑 Let me decide each move"
             value: "manual"
           - label: "🎲 Randomly decide each move"
             value: "random"
