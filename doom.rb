@@ -54,26 +54,9 @@ end
 def capture_frame(i, duration)
   system("ffmpeg -y -t #{duration} -video_size 320x240 -framerate 15 -f x11grab -i :1 #{i}.apng -loglevel warning")
   system("rm ./frame_*.png 2>/dev/null")
+  # Create optimized PNG for faster loading
+  system("ffmpeg -i #{i}.apng -compression_level 1 -pred 1 #{i}.png -loglevel warning 2>/dev/null")
   system("ffmpeg -i #{i}.apng -vsync 0 frame_%03d.png -loglevel warning 2>/dev/null")
-end
-
-def image_to_base64(filename)
-  require 'base64'
-  if File.exist?(filename)
-    file_size = File.size(filename)
-    puts "📸 Encoding #{filename} (#{file_size} bytes)"
-    
-    # Skip base64 for files larger than 100KB to avoid annotation limits
-    if file_size > 100_000
-      puts "⚠️ File too large for base64, using artifact instead"
-      return nil
-    end
-    
-    Base64.strict_encode64(File.read(filename, mode: 'rb'))
-  else
-    puts "❌ File #{filename} not found"
-    nil
-  end
 end
 
 def send_key(key)
@@ -157,16 +140,6 @@ loop do
   signal_doom(doom_pid, "STOP")
   
   File.rename("#{i}.apng", "#{i}.png") if File.exist?("#{i}.apng")
-  
-  # Test if Buildkite supports base64 data URIs at all
-  # Create a minimal 1x1 red pixel PNG
-  test_base64 = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8/5+hHgAHggJ/PchI7wAAAABJRU5ErkJggg=="
-  
-  # Convert actual image to base64 for comparison
-  base64_image = image_to_base64("#{i}.png")
-  puts "Base64 length: #{base64_image&.length || 'nil'}"
-  
-  # Still upload as artifact for backup
   upload_artifact("#{i}.png")
   
   history_table = if action_history.empty?
@@ -176,26 +149,9 @@ loop do
     %(<div style="text-align: center;"><table class="mt2" style="width: 640px; margin: 0 auto; display: inline-block;"><thead><tr><th class='center' width="213">Mode</th><th class='center' width="213">Action</th><th class='center' width="214">Turn</th></tr></thead><tbody>#{rows}</tbody></table></div>)
   end
   
-  # Test both base64 approaches
-  if base64_image
-    annotate(%(<div class="flex flex-column items-center">
-      <p>Testing base64 support:</p>
-      <img width="32" height="32" src="data:image/png;base64,#{test_base64}" style="border: 1px solid red;">
-      <p>Actual game frame:</p>
-      <img width="640" height="480" src="data:image/png;base64,#{base64_image}" style="image-rendering: pixelated; image-rendering: -moz-crisp-edges; image-rendering: crisp-edges;">
-      <p>Fallback artifact:</p>
-      <img width="640" height="480" src="artifact://#{i}.png">
-      #{history_table}
-    </div>))
-  else
-    annotate(%(<div class="flex flex-column items-center">
-      <p>Testing base64 support:</p>
-      <img width="32" height="32" src="data:image/png;base64,#{test_base64}" style="border: 1px solid red;">
-      <p>Using artifact (base64 failed):</p>
-      <img width="640" height="480" src="artifact://#{i}.png">
-      #{history_table}
-    </div>))
-  end
+  # Optimized for faster loading with cache busting
+  timestamp = Time.now.to_i
+  annotate(%(<div class="flex flex-column items-center"><img width="640" height="480" src="artifact://#{i}.png?v=#{timestamp}" style="image-rendering: pixelated; image-rendering: -moz-crisp-edges; image-rendering: crisp-edges;">#{history_table}</div>))
   
   if mode == "random"
     action_input = ask_for_input(i, mode)
