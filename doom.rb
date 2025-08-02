@@ -75,7 +75,7 @@ end
 def ask_for_input(i, mode)
   puts "DEBUG: Mode received: '#{mode}' (#{mode.class})"
   pipeline = case mode
-  when "human"
+  when "manual"
     move_options = MOVES.map { |m| {label: "#{m[:emoji]} #{m[:label]}", value: m[:key]} }
     step = {
       "input" => "Move #{i}",
